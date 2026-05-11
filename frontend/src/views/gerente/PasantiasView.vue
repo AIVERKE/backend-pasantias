@@ -94,6 +94,7 @@
                     <div class="flex items-center gap-1.5">
                       <v-icon icon="mdi-calendar-blank-outline" size="14" class="text-gray-400"></v-icon>
                       {{ formatearFecha(item.fecha_inicio) }}
+                      <span v-if="item.fecha_fin && item.fecha_fin !== 'Sin fecha'"> - {{ formatearFecha(item.fecha_fin) }}</span>
                     </div>
                   </td>
                   <td class="py-4 px-6">
@@ -101,12 +102,12 @@
                       <div v-if="item.jefe_pasantes && item.jefe_pasantes.length > 0" class="flex flex-wrap gap-1.5">
                         <span 
                           v-for="jefe in item.jefe_pasantes" 
-                          :key="jefe.id"
+                          :key="jefe.id_jefe || jefe.id"
                           class="inline-flex items-center gap-1.5 bg-gray-100 text-gray-700 px-2.5 py-1 rounded-md text-xs font-medium border border-gray-200 group/badge hover:bg-white hover:border-red-200 hover:text-red-600 transition-colors cursor-default"
                         >
                           <v-icon icon="mdi-account-tie" size="14" class="text-gray-400 group-hover/badge:text-red-400"></v-icon>
-                          {{ jefe.nombre }}
-                          <button @click.stop="quitarJefe(item.id, jefe.id)" class="ml-0.5 text-gray-400 hover:text-red-500 bg-transparent rounded-full hover:bg-red-50 p-0.5" title="Remover jefe">
+                          {{ jefe.usuario?.nombre || jefe.nombre }}
+                          <button @click.stop="quitarJefe(item.id_pasantia || item.id, jefe.id_jefe || jefe.id)" class="ml-0.5 text-gray-400 hover:text-red-500 bg-transparent rounded-full hover:bg-red-50 p-0.5" title="Remover jefe">
                             <v-icon icon="mdi-close" size="12"></v-icon>
                           </button>
                         </span>
@@ -119,8 +120,8 @@
                     </div>
                   </td>
                   <td class="py-4 px-6 text-center">
-                    <span v-if="item.estado === 'Publicada'" class="inline-flex items-center justify-center w-8 h-8 rounded-full font-bold bg-green-100 text-green-700 shadow-sm border border-green-200">
-                      {{ item.postulantes }}
+                    <span v-if="item.estado === 'en_curso'" class="inline-flex items-center justify-center w-8 h-8 rounded-full font-bold bg-green-100 text-green-700 shadow-sm border border-green-200">
+                      {{ item.postulantes || 0 }}
                     </span>
                     <span v-else class="text-xs text-gray-400 italic font-medium">-</span>
                   </td>
@@ -128,44 +129,44 @@
                     <div class="flex items-center justify-center gap-2 opacity-100 sm:opacity-70 group-hover:opacity-100 transition-opacity">
                       
                       <!-- Botones condicionales por estado -->
-                      <template v-if="item.estado === 'Borrador'">
+                      <template v-if="item.estado === 'pendiente'">
                         <button @click="abrirEditar(item)" class="action-btn bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white" title="Editar Convocatoria">
                           <v-icon icon="mdi-pencil-outline" size="16"></v-icon>
                         </button>
-                        <button @click="cambiarEstado(item.id, 'EN_CURSO')" class="action-btn bg-green-50 text-green-600 hover:bg-green-600 hover:text-white" title="Publicar Convocatoria">
+                        <button @click="cambiarEstado(item.id_pasantia || item.id, 'en_curso')" class="action-btn bg-green-50 text-green-600 hover:bg-green-600 hover:text-white" title="Publicar Convocatoria">
                           <v-icon icon="mdi-send-outline" size="16"></v-icon>
                         </button>
-                        <button @click="eliminarPasantia(item.id)" class="action-btn bg-red-50 text-red-600 hover:bg-red-600 hover:text-white" title="Eliminar">
+                        <button @click="eliminarPasantia(item.id_pasantia || item.id)" class="action-btn bg-red-50 text-red-600 hover:bg-red-600 hover:text-white" title="Eliminar">
                           <v-icon icon="mdi-delete-outline" size="16"></v-icon>
                         </button>
                       </template>
 
-                      <template v-else-if="item.estado === 'Publicada'">
+                      <template v-else-if="item.estado === 'en_curso'">
                         <button @click="abrirEditar(item)" class="action-btn bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white" title="Editar Detalles">
                           <v-icon icon="mdi-pencil-outline" size="16"></v-icon>
                         </button>
-                        <button @click="cambiarEstado(item.id, 'PENDIENTE')" class="action-btn bg-amber-50 text-amber-600 hover:bg-amber-600 hover:text-white" title="Pausar / Volver a Borrador">
+                        <button @click="cambiarEstado(item.id_pasantia || item.id, 'pendiente')" class="action-btn bg-amber-50 text-amber-600 hover:bg-amber-600 hover:text-white" title="Pausar / Volver a Borrador">
                           <v-icon icon="mdi-pause" size="16"></v-icon>
                         </button>
-                        <button @click="cambiarEstado(item.id, 'FINALIZADA')" class="action-btn bg-purple-50 text-purple-600 hover:bg-purple-600 hover:text-white" title="Marcar como Completada">
+                        <button @click="cambiarEstado(item.id_pasantia || item.id, 'finalizada')" class="action-btn bg-purple-50 text-purple-600 hover:bg-purple-600 hover:text-white" title="Marcar como Completada">
                           <v-icon icon="mdi-check-decagram-outline" size="16"></v-icon>
                         </button>
-                        <button @click="cambiarEstado(item.id, 'ARCHIVADA')" class="action-btn bg-gray-100 text-gray-600 hover:bg-gray-600 hover:text-white" title="Archivar">
+                        <button @click="cambiarEstado(item.id_pasantia || item.id, 'cancelada')" class="action-btn bg-gray-100 text-gray-600 hover:bg-gray-600 hover:text-white" title="Archivar">
                           <v-icon icon="mdi-archive-outline" size="16"></v-icon>
                         </button>
                       </template>
 
-                      <template v-else-if="item.estado === 'Completada'">
-                        <button @click="cambiarEstado(item.id, 'EN_CURSO')" class="action-btn bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white" title="Reabrir Convocatoria">
+                      <template v-else-if="item.estado === 'finalizada'">
+                        <button @click="cambiarEstado(item.id_pasantia || item.id, 'en_curso')" class="action-btn bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white" title="Reabrir Convocatoria">
                           <v-icon icon="mdi-refresh" size="16"></v-icon>
                         </button>
-                        <button @click="cambiarEstado(item.id, 'ARCHIVADA')" class="action-btn bg-gray-100 text-gray-600 hover:bg-gray-600 hover:text-white" title="Archivar">
+                        <button @click="cambiarEstado(item.id_pasantia || item.id, 'cancelada')" class="action-btn bg-gray-100 text-gray-600 hover:bg-gray-600 hover:text-white" title="Archivar">
                           <v-icon icon="mdi-archive-outline" size="16"></v-icon>
                         </button>
                       </template>
 
-                      <template v-else-if="item.estado === 'Archivada'">
-                        <button @click="cambiarEstado(item.id, 'EN_CURSO')" class="action-btn bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white" title="Restaurar y Publicar">
+                      <template v-else-if="item.estado === 'cancelada'">
+                        <button @click="cambiarEstado(item.id_pasantia || item.id, 'en_curso')" class="action-btn bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white" title="Restaurar y Publicar">
                           <v-icon icon="mdi-restore" size="16"></v-icon>
                         </button>
                       </template>
@@ -184,7 +185,7 @@
             </div>
             <h4 class="text-gray-900 font-bold text-lg mb-1">No hay convocatorias</h4>
             <p class="text-gray-500 text-sm text-center max-w-sm mb-6">No se encontraron pasantías en esta categoría con los filtros actuales.</p>
-            <button v-if="activeTab === 'Borrador'" @click="abrirCrear" class="text-primary font-medium hover:underline text-sm">
+            <button v-if="activeTab === 'pendiente'" @click="abrirCrear" class="text-primary font-medium hover:underline text-sm">
               Crear una nueva pasantía
             </button>
             <button v-else @click="limpiarFiltros" class="text-primary font-medium hover:underline text-sm">
@@ -232,6 +233,18 @@
               <label class="block text-sm font-semibold text-gray-700 mb-1.5">Fecha de Inicio Estimada</label>
               <div class="relative">
                 <input v-model="formData.fecha_inicio" type="date" required class="w-full bg-white border border-gray-300 rounded-xl py-2.5 px-4 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none" />
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-sm font-semibold text-gray-700 mb-1.5">Área</label>
+              <input v-model="formData.area" type="text" required class="w-full bg-white border border-gray-300 rounded-xl py-2.5 px-4 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none placeholder-gray-400" placeholder="Ej: Tecnología, Marketing..." />
+            </div>
+
+            <div>
+              <label class="block text-sm font-semibold text-gray-700 mb-1.5">Fecha de Fin Estimada</label>
+              <div class="relative">
+                <input v-model="formData.fecha_fin" type="date" required class="w-full bg-white border border-gray-300 rounded-xl py-2.5 px-4 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none" />
               </div>
             </div>
 
@@ -321,12 +334,12 @@ import { useAuthStore } from '@/stores/auth'
 
 const authStore = useAuthStore()
 
-const activeTab = ref('Publicada')
+const activeTab = ref('en_curso')
 const tabs = [
-  { id: 'Publicada', label: 'En Curso', icon: 'mdi-rocket-launch-outline' },
-  { id: 'Borrador', label: 'Borradores', icon: 'mdi-file-document-edit-outline' },
-  { id: 'Completada', label: 'Finalizadas', icon: 'mdi-check-decagram-outline' },
-  { id: 'Archivada', label: 'Archivadas', icon: 'mdi-archive-outline' }
+  { id: 'en_curso', label: 'En Curso', icon: 'mdi-rocket-launch-outline' },
+  { id: 'pendiente', label: 'Pendiente', icon: 'mdi-file-document-edit-outline' },
+  { id: 'finalizada', label: 'Finalizada', icon: 'mdi-check-decagram-outline' },
+  { id: 'cancelada', label: 'Cancelada', icon: 'mdi-archive-outline' }
 ]
 
 const filters = ref({ titulo: '', area: '', jefe: '' })
@@ -357,18 +370,18 @@ const modalForm = ref(false)
 const modoForm = ref('crear') // 'crear' | 'editar'
 const procesando = ref(false)
 const mensaje = ref('')
-const formData = ref({ id: null, titulo: '', descripcion: '', fecha_inicio: '' })
+const formData = ref({ id: null, titulo: '', descripcion: '', fecha_inicio: '', fecha_fin: '', area: '' })
 
 // Modal asignar jefe
 const modalJefe = ref(false)
 const pasantiaJefeSeleccionada = ref(null)
-const pasantiaJefeSeleccionadaObj = computed(() => pasantias.value.find(p => p.id === pasantiaJefeSeleccionada.value))
+const pasantiaJefeSeleccionadaObj = computed(() => pasantias.value.find(p => (p.id_pasantia || p.id) === pasantiaJefeSeleccionada.value))
 const JefesDisponibles = ref([])
 const empresaId = ref(null)
 
 const abrirCrear = () => {
   modoForm.value = 'crear'
-  formData.value = { id: null, titulo: '', descripcion: '', fecha_inicio: '' }
+  formData.value = { id: null, titulo: '', descripcion: '', fecha_inicio: '', fecha_fin: '', area: '' }
   mensaje.value = ''
   modalForm.value = true
 }
@@ -384,11 +397,21 @@ const abrirEditar = (item) => {
     }
   }
 
+  let formattedEndDate = ''
+  if (item.fecha_fin) {
+    const d = new Date(item.fecha_fin)
+    if(!isNaN(d.getTime())) {
+      formattedEndDate = d.toISOString().split('T')[0]
+    }
+  }
+
   formData.value = {
-    id: item.id,
+    id: item.id_pasantia || item.id,
     titulo: item.titulo,
     descripcion: item.descripcion || '',
-    fecha_inicio: formattedDate
+    fecha_inicio: formattedDate,
+    fecha_fin: formattedEndDate,
+    area: item.area || ''
   }
   mensaje.value = ''
   modalForm.value = true
@@ -403,7 +426,7 @@ const cerrarModalForm = () => {
 
 const recargarPasantias = async () => {
   try {
-    const res = await axios.get('/api/auth/gerente/pasantias', {
+    const res = await axios.get('/api/pasantias/gerente', {
       headers: { Authorization: `Bearer ${authStore.token}` }
     })
     pasantias.value = res.data || []
@@ -417,21 +440,21 @@ const guardarPasantia = async () => {
     procesando.value = true
     mensaje.value = ''
     
+    const payload = {
+      titulo: formData.value.titulo,
+      descripcion: formData.value.descripcion,
+      fecha_inicio: formData.value.fecha_inicio || null,
+      fecha_fin: formData.value.fecha_fin || null,
+      area: formData.value.area
+    }
+    
     if (modoForm.value === 'crear') {
-      await axios.post('/api/auth/gerente/pasantias', {
-        titulo: formData.value.titulo,
-        descripcion: formData.value.descripcion,
-        fecha_inicio: formData.value.fecha_inicio
-      }, {
+      await axios.post('/api/pasantias/gerente', payload, {
         headers: { Authorization: `Bearer ${authStore.token}` }
       })
       mensaje.value = '¡Convocatoria creada exitosamente!'
     } else {
-      await axios.patch(`/api/pasantias/${formData.value.id}`, {
-        titulo: formData.value.titulo,
-        descripcion: formData.value.descripcion,
-        fecha_inicio: formData.value.fecha_inicio
-      }, {
+      await axios.patch(`/api/pasantias/${formData.value.id}`, payload, {
         headers: { Authorization: `Bearer ${authStore.token}` }
       })
       mensaje.value = '¡Convocatoria actualizada!'
@@ -480,7 +503,7 @@ const eliminarPasantia = async (id) => {
 
 // Abrir modal asignar jefe
 const abrirAsignarJefe = async (item) => {
-  pasantiaJefeSeleccionada.value = item.id
+  pasantiaJefeSeleccionada.value = item.id_pasantia || item.id
   
   // Obtener empresaId si no lo tenemos
   if (!empresaId.value && pasantias.value.length > 0) {

@@ -1,6 +1,7 @@
-import { Entity, Column, PrimaryGeneratedColumn, ManyToOne, OneToMany, JoinColumn, CreateDateColumn, UpdateDateColumn, DeleteDateColumn } from 'typeorm';
+import { Entity, Column, PrimaryGeneratedColumn, ManyToOne, OneToMany, JoinColumn, CreateDateColumn, UpdateDateColumn, DeleteDateColumn, ManyToMany, JoinTable } from 'typeorm';
 import { Empresa } from '../../empresas/entities/empresa.entity';
 import { Inscripcion } from '../../inscripciones/entities/inscripcion.entity';
+import { JefePasantes } from '../../usuarios/entities/jefe-pasantes.entity';
 
 export enum EstadoPasantia {
   PENDIENTE = 'pendiente',
@@ -32,6 +33,17 @@ export class Pasantia {
     default: EstadoPasantia.PENDIENTE,
   })
   estado: EstadoPasantia;
+
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  area: string;
+
+  @ManyToMany(() => JefePasantes)
+  @JoinTable({
+    name: 'pasantia_jefe_pasantes',
+    joinColumn: { name: 'id_pasantia', referencedColumnName: 'id_pasantia' },
+    inverseJoinColumn: { name: 'id_jefe', referencedColumnName: 'id_jefe' }
+  })
+  jefe_pasantes: JefePasantes[];
 
   @ManyToOne(() => Empresa)
   @JoinColumn({ name: 'id_empresa' })
