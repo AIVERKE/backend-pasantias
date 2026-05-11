@@ -538,6 +538,50 @@ export class AuthService {
     });
   }
 
+  async getGerentePasantes(gerenteUserId: number) {
+    // 1. Obtener el perfil del gerente para saber su empresa
+    const gerentePerfil = await this.usuariosService.findOne(gerenteUserId);
+    
+    if (!gerentePerfil.gerente?.empresa) {
+      throw new NotFoundException('El gerente no tiene una empresa asignada');
+    }
+
+    const empresaId = gerentePerfil.gerente.empresa.id_empresa;
+
+    // 2. Obtener inscripciones aprobadas para esa empresa
+    const inscripciones = await this.inscripcionRepository.find({
+      where: {
+        pasantia: { empresa: { id_empresa: empresaId } },
+        estado: EstadoInscripcion.APROBADA
+      },
+      relations: ['estudiante', 'estudiante.usuario', 'pasantia', 'jefe', 'jefe.usuario']
+    });
+
+    return inscripciones.map(ins => {
+      const inicio = ins.fecha_inicio_periodo ? new Date(ins.fecha_inicio_periodo) : null;
+      const fin = ins.fecha_fin_periodo ? new Date(ins.fecha_fin_periodo) : null;
+      let progreso = 0;
+
+      if (inicio && fin) {
+        const total = fin.getTime() - inicio.getTime();
+        const transcurrido = new Date().getTime() - inicio.getTime();
+        if (total > 0) {
+          progreso = Math.min(100, Math.max(0, Math.round((transcurrido / total) * 100)));
+        }
+      }
+
+      return {
+        id: ins.id_inscripcion,
+        nombre: ins.estudiante?.usuario ? `${ins.estudiante.usuario.nombre} ${ins.estudiante.usuario.apellido}` : 'Desconocido',
+        ci: ins.estudiante?.registro_universitario || 'S/N',
+        pasantia: ins.pasantia?.titulo || 'Sin título',
+        jefe: ins.jefe?.usuario ? `${ins.jefe.usuario.nombre} ${ins.jefe.usuario.apellido}` : 'Sin asignar',
+        fechaInicio: ins.fecha_inicio_periodo ? new Date(ins.fecha_inicio_periodo).toLocaleDateString('es-BO') : 'S/F',
+        progreso
+      };
+    });
+  }
+
   async invitarJefe(gerenteUserId: number, data: { email: string, nombre: string, apellido: string, departamento: string, contrasena?: string }) {
     const gerentePerfil = await this.usuariosService.findOne(gerenteUserId);
     if (!gerentePerfil.gerente?.empresa) {

@@ -228,6 +228,19 @@ export class AuthController {
   }
 
   @UseGuards(JwtAuthGuard)
+  @Get('gerente/pasantes')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Obtener pasantes de la empresa del gerente' })
+  @ApiResponse({ status: 200, description: 'Lista de pasantes' })
+  @ApiResponse({ status: 401, description: 'Token inválido o ausente' })
+  async getGerentePasantes(@Request() req: any) {
+    if (req.user.tipo !== 'gerente' && req.user.tipo !== 'GERENTE') {
+      return { message: 'Acceso restringido a gerentes' };
+    }
+    return this.authService.getGerentePasantes(req.user.userId);
+  }
+
+  @UseGuards(JwtAuthGuard)
   @Get('gerente/equipo/:id/pasantes')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Obtener pasantes a cargo de un jefe específico' })
