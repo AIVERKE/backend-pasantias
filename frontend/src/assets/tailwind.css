@@ -1,0 +1,31 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #3B82F6;
+  --color-secondary: #1A2233;
+  --color-tertiary: #D16900;
+  --color-neutral: #F3F4F6;
+  --color-white: #FFFFFF;
+  --color-success: #10B981;
+  --color-danger: #EF4444;
+  
+  --font-headline: "Manrope", sans-serif;
+  --font-body: "Inter", sans-serif;
+  --font-label: "Inter", sans-serif;
+}
+
+@layer utilities {
+  .glass-card {
+    background: rgba(30, 41, 59, 0.7);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+  }
+
+  .hero-pattern {
+    background-image: linear-gradient(rgba(26, 34, 51, 0.8), rgba(26, 34, 51, 0.95)), url(https://lh3.googleusercontent.com/aida-public/AB6AXuCM3CZgUTYO9CLHkrFfbvGmL3PLmQflFm2DTdJ_AwL7mhvPu8DZvE62ROnF4h-b-t93hwfs6Q4IiR9BxB3B3M86O3UO43engBfN1BY2GxiEmGZIXPy1-HlNSBI9W8P1caShtGIH_oLrHcou8O7vzlw9jMric0ylhoNtpjBXYWQeA9F60zqTglqz2nqq8O2HkDQIBRzYFTqS1dcBzjOFOHzmPRTatPt9l0fcqppGWoX_uZtRmNcJvsbews7ZpWg7GC3YQOOnwAWsdVMg);
+    background-size: cover;
+    background-position: center;
+  }
+}
+

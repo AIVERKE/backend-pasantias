@@ -1,0 +1,40 @@
+{
+  "name": "pasantias-frontend",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/AIVERKE/frontend-pasantias.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "bugs": {
+    "url": "https://github.com/AIVERKE/frontend-pasantias/issues"
+  },
+  "homepage": "https://github.com/AIVERKE/frontend-pasantias#readme",
+  "dependencies": {
+    "axios": "^1.15.0",
+    "pinia": "^3.0.4",
+    "vue": "^3.5.32",
+    "vue-router": "^4.6.4",
+    "vuetify": "^4.0.5"
+  },
+  "devDependencies": {
+    "@mdi/font": "^7.4.47",
+    "@tailwindcss/postcss": "^4.2.2",
+    "@vitejs/plugin-vue": "^6.0.6",
+    "autoprefixer": "^10.5.0",
+    "postcss": "^8.5.10",
+    "sass": "^1.99.0",
+    "tailwindcss": "^4.2.2",
+    "vite": "^8.0.8"
+  }
+}

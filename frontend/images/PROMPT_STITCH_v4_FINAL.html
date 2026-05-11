@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prompt Stitch v4 — Sistema de Gestión de Pasantías UMSA</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Inter', sans-serif;
+            background: #F3F4F6;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .container { max-width: 1200px; margin: 0 auto; }
+        .header {
+            background: linear-gradient(135deg, #1A2233 0%, #3B82F6 100%);
+            color: white;
+            padding: 40px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        .header h1 { font-size: 32px; margin-bottom: 10px; }
+        .header p { font-size: 16px; opacity: 0.9; }
+        .order-row {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-top: 20px;
+            justify-content: center;
+        }
+        .step-pill {
+            font-size: 11px;
+            font-weight: 600;
+            padding: 6px 12px;
+            border-radius: 20px;
+            background: rgba(255,255,255,0.2);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.4);
+        }
+        .block {
+            background: white;
+            border: 1px solid #E5E7EB;
+            border-radius: 12px;
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+        .block-header {
+            padding: 14px 18px;
+            background: #F9FAFB;
+            border-bottom: 1px solid #E5E7EB;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .block-num {
+            font-size: 10px;
+            font-weight: 700;
+            background: #3B82F6;
+            color: white;
+            padding: 3px 10px;
+            border-radius: 4px;
+            display: inline-block;
+        }
+        .block-title {
+            font-size: 11px;
+            font-weight: 600;
+            color: #6B7280;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .copy-btn {
+            font-size: 11px;
+            font-weight: 600;
+            padding: 6px 14px;
+            border-radius: 5px;
+            border: 1px solid #D1D5DB;
+            background: #FFFFFF;
+            color: #6B7280;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .copy-btn:hover {
+            color: #111827;
+            border-color: #9CA3AF;
+        }
+        .copy-btn.copied {
+            color: #059669;
+            border-color: #10B981;
+            background: #ECFDF5;
+        }
+        .block-body {
+            padding: 18px;
+            font-size: 13px;
+            line-height: 1.8;
+            color: #111827;
+            white-space: pre-wrap;
+            overflow-x: auto;
+            max-height: 500px;
+            overflow-y: auto;
+            background: #FAFBFC;
+        }
+        .block-tip {
+            font-size: 11px;
+            color: #6B7280;
+            padding: 10px 18px;
+            border-top: 1px solid #E5E7EB;
+            background: #F3F4F6;
+        }
+        .block-tip::before { content: '💡 '; }
+        code {
+            background: #E5E7EB;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Monaco', 'Courier New', monospace;
+            font-size: 12px;
+        }
+        .footer {
+            text-align: center;
+            padding: 40px 20px;
+            color: #6B7280;
+            font-size: 12px;
+        }
+        .footer strong { color: #111827; }
+        .highlight {
+            background: #FEF3C7;
+            padding: 2px 4px;
+            border-radius: 2px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Prompt Stitch v4</h1>
+            <p>Sistema de Gestión de Pasantías — UMSA</p>
+            <p style="margin-top: 8px; font-size: 14px;">Modelo Navegacional y Arquitectura de Interfaz de Usuario</p>
+            <div class="order-row">
+                <span class="step-pill">1 · Scholar Core</span>
+                <span class="step-pill">2 · Logo UMSA</span>
+                <span class="step-pill">3 · Layout global</span>
+                <span class="step-pill">4 · Menús por rol</span>
+                <span class="step-pill">5 · Contenido por opción</span>
+                <span class="step-pill">6 · Auth 7 pantallas</span>
+                <span class="step-pill">7 · Estilo e interacción</span>
+            </div>
+        </div>
+
+        <div class="block">
+            <div class="block-header">
+                <div><span class="block-num">1</span> <span class="block-title">Scholar Core — Sistema de diseño</span></div>
+                <button class="copy-btn" onclick="copyToClipboard('block1')">Copiar</button>
+            </div>
+            <div class="block-body" id="block1">Crea un sistema de diseño llamado "Scholar Core" con los siguientes tokens antes de generar cualquier pantalla:
+
+COLORES
+· Principal:      #3B82F6  (azul — acciones, enlaces)
+· Secundario:     #1A2233  (marino oscuro — fondo barra lateral)
+· Terciario:      #D16900  (ámbar — advertencias, alertas)
+· Neutro:         #F3F4F6  (gris claro — fondo de página, tarjetas)
+· Blanco:         #FFFFFF  (superficie tarjetas, formularios)
+· Éxito:          #10B981  (verde — aprobado, completado)
+· Peligro:        #EF4444  (rojo — rechazado, alertas)
+
+TIPOGRAFÍA
+· Títulos: Manrope 600–700 · Cuerpo: Inter 400–500
+
+COMPONENTES BASE
+· Tarjetas: fondo blanco, radius 12px, sombra sutil
+· Botones: Principal=#3B82F6 · Secundario=contorno · Terciario=fantasma
+· Insignias: píldora, texto 10px, color por estado
+· Campos: relleno gris claro, label arriba siempre
+· Pestañas: neutro en reposo, #1A2233 o #3B82F6 activo, transición 150ms
+· Espaciado: cuadrícula 8px en toda la interfaz
+
+REGLA GLOBAL DE TABLAS
+Cada columna tiene su propio campo de búsqueda/filtro inline debajo del encabezado.
+Excepción: columna de Acciones no tiene filtro.
+Esto reemplaza los filtros globales en la mayoría de vistas.</div>
+            <div class="block-tip">Este es el bloque base que define todos los tokens del sistema.</div>
+        </div>
+
+        <div class="block">
+            <div class="block-header">
+                <div><span class="block-num">2</span> <span class="block-title">Logo UMSA — reemplaza ícono de libro en todo el sistema</span></div>
+                <button class="copy-btn" onclick="copyToClipboard('block2')">Copiar</button>
+            </div>
+            <div class="block-body" id="block2">LOGO DEL SISTEMA — UMSA. Nunca usar ícono genérico de libro.
+
+DESCRIPCIÓN DEL LOGO:
+Birrete universitario azul + dos flechas curvas (azul y naranja) apuntando derecha + edificio
+institucional blanco con ventanas. El logo funciona sobre fondo oscuro (#1A2233).
+
+DÓNDE APARECE:
+
+1. BARRA LATERAL — SECCIÓN SUPERIOR (todas las pantallas del sistema):
+   · Símbolo gráfico (40px alto), alineado izquierda
+   · A la derecha: "Pasantia" Manrope 700 blanco + subtítulo "UMSA · Academic Ecosystem" Inter 10px
+
+2. PANTALLAS DE AUTENTICACIÓN — COLUMNA IZQUIERDA:
+   · Logo completo centrado: símbolo (64px alto) + texto "Sistema de Gestión de Pasantias" + "UMSA"
+   · Todo en blanco sobre fondo #1A2233. Mantener proporciones.
+
+3. ESTADOS DE CONFIRMACIÓN (AUTH-7):
+   · Solo símbolo pequeño 32px en esquina superior izquierda</div>
+            <div class="block-tip">REGLA ABSOLUTA: Nunca usar ícono de libro en ninguna pantalla. Siempre usar el símbolo UMSA.</div>
+        </div>
+
+        <div class="block">
+            <div class="block-header">
+                <div><span class="block-num">3</span> <span class="block-title">Layout global y barra lateral</span></div>
+                <button class="copy-btn" onclick="copyToClipboard('block3')">Copiar</button>
+            </div>
+            <div class="block-body" id="block3">DISEÑO GLOBAL — TODAS LAS PANTALLAS DEL SISTEMA INTERNO
+
+BARRA LATERAL IZQUIERDA (fija, 240px, fondo #1A2233):
+
+SECCIÓN SUPERIOR:
+· Símbolo gráfico UMSA (40px) + "Pasantia" Manrope 700 blanco
+· Subtítulo "UMSA · Academic Ecosystem" Inter 10px blanco 50%
+
+SECCIÓN MEDIA — menú de navegación:
+· Ítem: ícono 20px + etiqueta Inter 13px, padding 10px 16px
+· Activo: fondo redondeado 8px #3B82F6 + barra izquierda 3px + texto blanco
+· Inactivo: texto blanco 70%, hover blanco 90%
+· Badge de pendientes: círculo rojo con número a la derecha
+
+SECCIÓN INFERIOR:
+· Círculo avatar 36px: iniciales, fondo blanco, texto #1A2233
+· Nombre completo Inter 13px 500 blanco
+· Rol Inter 11px blanco 60%
+· Botón "Cerrar sesión": ícono + texto blanco 60%
+
+ÁREA DE CONTENIDO DERECHA (flex 1, fondo #F3F4F6):
+· Barra superior 48px: migas de pan izquierda · búsqueda derecha
+· Zona: padding 24px, desplazable
+· Encabezado: título Manrope 24px 700 + subtítulo Inter 14px gris
+· Contenido carga según opción seleccionada (ver bloque 5)
+
+Responsivo: barra lateral colapsa a 64px solo íconos</div>
+        </div>
+
+        <div class="block">
+            <div class="block-header">
+                <div><span class="block-num">4</span> <span class="block-title">Menús de navegación por rol</span></div>
+                <button class="copy-btn" onclick="copyToClipboard('block4')">Copiar</button>
+            </div>
+            <div class="block-body" id="block4">MENÚ DE NAVEGACIÓN POR ROL — VERSIÓN FINAL
+
+─── ESTUDIANTE ─────────────────────────────────────
+· 🎓 Panel Principal   — dashboard con resumen
+· 📢 Ver Pasantías     — explorar convocatorias
+· 📋 Mi Inscripción    — estado y postulaciones (con pestañas por postulación)
+· 📓 Bitácora          — ver entradas y puntuaciones (solo lectura)
+· 📄 Mi Hoja de Vida   — perfil, habilidades y link a CV en Drive
+· 📊 Mi Informe Final  — ver informe emitido + historial
+
+─── TUTOR ──────────────────────────────────────────
+· 🏠 Panel Principal   — resumen de estudiantes y pendientes
+· 👥 Mis Estudiantes   — tabla de estudiantes asignados
+· 📈 Seguimiento       — progreso detallado por estudiante
+NOTA: menú "Evaluaciones" eliminado.
+
+─── JEFE DE PASANTES ────────────────────────────────
+· 🏠 Panel Principal   — resumen operativo y búsqueda
+· 📥 Inscripciones     — bandeja con badge de pendientes
+· 👷 Mis Pasantes      — tabla con gestión de estado
+· 📓 Bitácoras         — revisar, calificar y observaciones
+· 📑 Informes Finales  — emitir informes generados
+· 🗂 Actividades       — crear, editar y asignar
+
+─── GERENTE ─────────────────────────────────────────
+· 🏠 Panel Principal   — resumen empresa y estadísticas
+· 🏢 Mi Empresa        — perfil editable
+· 📢 Pasantías         — gestión (publicadas, borradores, archivadas)
+· 👥 Equipo            — gestionar Jefes y ver sus pasantes
+· 👷 Pasantes Activos  — todos con filtros
+NOTA: menú "Estadísticas" eliminado.
+
+─── SUPER USUARIO ───────────────────────────────────
+· 🏠 Panel Principal   — estado global, tarjetas-botón y solicitudes
+· 👤 Usuarios          — gestión completa con pestañas por rol
+· 🏢 Empresas          — registro, aprobación y detalle
+· 📋 Pasantías         — catálogo global con filtros
+NOTA: "Reportes Globales" y "Configuración" eliminados.</div>
+        </div>
+
+        <div class="block">
+            <div class="block-header">
+                <div><span class="block-num">5</span> <span class="block-title">Área de contenido derecha — cómo carga cada opción (★ MÁS IMPORTANTE)</span></div>
+                <button class="copy-btn" onclick="copyToClipboard('block5')">Copiar</button>
+            </div>
+            <div class="block-body" id="block5">[Este bloque es muy largo — contiene la especificación completa de cada vista por rol]
+
+RESUMEN RÁPIDO DE VISTAS POR ROL:
+
+ESTUDIANTE:
+· Panel Principal → DASHBOARD (3 tarjetas + lista bitácora)
+· Ver Pasantías → TARJETAS con pestañas + panel lateral (600px) con comentarios de ex pasantes
+· Mi Inscripción → DETALLE con pestañas (una por postulación aprobada/rechazada/pendiente)
+· Bitácora → LISTA + PANEL con pestañas [Mis Entradas | Actividades] — solo lectura
+· Mi Hoja de Vida → FORMULARIO editable con pestañas [Resumen | Habilidades | Historial]
+  + campo Link a CV en Drive
+· Mi Informe Final → DETALLE + lista de pasantías realizadas con logo empresa y nota
+
+TUTOR:
+· Panel Principal → DASHBOARD (2 tarjetas + lista estudiantes con menos progreso)
+· Mis Estudiantes → TABLA con filtro por columna
+· Seguimiento → TABLA + desplegable para seleccionar estudiante
+
+JEFE DE PASANTES:
+· Panel Principal → DASHBOARD + barra búsqueda por nombre/CI + lista inscripciones recientes (scroll)
+· Inscripciones → TABLA con pestañas [Pendientes🔴 | Aprobadas | Rechazadas | Todas] + filtro por columna
+· Mis Pasantes → TABLA + cambio de estado (Activo/Licencia/Abandono/Conclusión) + dar de baja
+· Bitácoras → LISTA agrupada + PANEL LATERAL para editar notas y observaciones por actividad
+· Informes Finales → TABLA + nota calculada automáticamente desde promedio de actividades
+· Actividades → TABLA + modal para crear/asignar (a todos o un pasante específico)
+
+GERENTE:
+· Panel Principal → DASHBOARD (3 tarjetas + lista pasantías activas)
+· Mi Empresa → DETALLE editable + sección Equipo con jefes
+· Pasantías → TABLA con pestañas [Publicadas | Borradores | Archivadas] + enlace al jefe
+· Equipo → LISTA tarjetas de jefes + despliega tabla de sus pasantes al clic
+· Pasantes Activos → TABLA con filtro por columna
+
+SUPER USUARIO:
+· Panel Principal → DASHBOARD con tarjetas-botón navegables + lista solicitudes pendientes
+· Usuarios → TABLA con pestañas [Todos | Estudiantes | Tutores | Jefes | Gerentes] + filtro por columna
+· Empresas → TABLA con banner de pendientes + aprobación/rechazo
+· Pasantías → TABLA con filtros y acciones</div>
+            <div class="block-tip">Este bloque define EXACTAMENTE cómo carga cada pantalla — es el más importante para la consistencia.</div>
+        </div>
+
+        <div class="block">
+            <div class="block-header">
+                <div><span class="block-num">6</span> <span class="block-title">Pantallas de autenticación (7 pantallas)</span></div>
+                <button class="copy-btn" onclick="copyToClipboard('block6')">Copiar</button>
+            </div>
+            <div class="block-body" id="block6">PANTALLAS DE AUTENTICACIÓN
+
+DISEÑO BASE — layout 50/50:
+COLUMNA IZQUIERDA fondo #1A2233:
+· Logo UMSA completo: símbolo (64px) + "Sistema de Gestión de Pasantias" + "UMSA"
+· Patrón geométrico azul baja opacidad
+· Frase pie: "Conectando el talento universitario con el mundo profesional"
+
+COLUMNA DERECHA fondo blanco, formulario centrado
+Mobile: solo columna derecha, símbolo UMSA pequeño arriba
+
+AUTH-1 — BIENVENIDA
+Tres tarjetas (72px): "Soy estudiante" (azul) · "Soy tutor" (borde azul) · "Registrar empresa" (borde azul)
+
+AUTH-2 — INICIO DE SESIÓN
+Campos: Correo · Contraseña (ojo) · "¿Olvidaste tu contraseña?"
+Botón "Iniciar sesión" azul · "Crear una cuenta"
+
+AUTH-3 — REGISTRO ESTUDIANTE (2 pasos)
+Paso 1: Nombre · Apellido · Correo institucional · Código estudiantil · Carrera · Semestre
+Paso 2: Contraseña + indicador fortaleza (4 segmentos) · Confirmar · Términos
+
+AUTH-4 — REGISTRO TUTOR (2 pasos)
+Paso 1: Nombre · Apellido · Correo · Especialidad · Institución
+Paso 2: igual a estudiante
+Aviso ámbar: "Tu cuenta quedará pendiente de aprobación"
+
+AUTH-5 — REGISTRO EMPRESA + GERENTE (3 pasos)
+Paso 1: Nombre empresa · Rubro · Dirección · Teléfono
+Paso 2: Nombre · Apellido · Correo corporativo · Cargo · Carrera
+Paso 3: Seguridad + aviso ámbar
+
+AUTH-6 — RECUPERAR CONTRASEÑA
+Ícono sobre en círculo · Campo correo · Botón "Enviar instrucciones"
+Estado éxito: check verde + "Revisa tu correo"
+
+AUTH-7 — CONFIRMACIÓN
+· Estudiante: check verde + "¡Listo! Ya puedes explorar pasantías"
+· Tutor/Gerente: check ámbar + "Solicitud enviada — recibirás correo al ser aprobada"
+· Jefe: check verde + "Cuenta activada. Ya puedes gestionar pasantes"</div>
+        </div>
+
+        <div class="block">
+            <div class="block-header">
+                <div><span class="block-num">7</span> <span class="block-title">Estilo, interacción y flujos globales</span></div>
+                <button class="copy-btn" onclick="copyToClipboard('block7')">Copiar</button>
+            </div>
+            <div class="block-body" id="block7">NOTAS DE ESTILO, INTERACCIÓN Y FLUJOS — VERSIÓN FINAL
+
+FLUJO DE AUTENTICACIÓN:
+AUTH-1 "Soy estudiante" → AUTH-3 → AUTH-7 → Dashboard Estudiante (acceso inmediato)
+AUTH-1 "Soy tutor" → AUTH-4 → AUTH-7 pendiente → espera aprobación
+AUTH-1 "Registrar empresa" → AUTH-5 → AUTH-7 pendiente → espera aprobación
+AUTH-1 "Ya tengo cuenta" → AUTH-2 → Dashboard según rol
+AUTH-2 "¿Olvidé contraseña?" → AUTH-6 → estado éxito
+Jefe: correo invitación del gerente → establece contraseña → Dashboard Jefe
+Super Usuario: creado solo por otro Super Usuario
+
+LOGO UMSA — REGLA ABSOLUTA:
+Nunca ícono genérico de libro. El símbolo (birrete+flechas+edificio) en todos los contextos.
+
+REGLA GLOBAL DE TABLAS:
+· Filtro inline por columna debajo del encabezado
+· Columna Acciones NUNCA tiene filtro
+· Aplica a: Inscripciones, Pasantes, Bitácoras, Usuarios, Empresas, Pasantías global
+
+PANEL LATERAL DESLIZANTE:
+· Ancho 480px (600px para pasantía con comentarios)
+· Entra desde derecha 200ms slide
+· Fondo blanco, sombra izquierda, botón X, cuerpo desplazable
+· Pie con botones de acción
+· Contenido principal NO se oscurece
+
+MODALES:
+· Fondo oscuro semitransparente · Tarjeta blanca centrada radius 12px
+· Máximo 2 acciones: primaria azul + cancelar fantasma
+· Usar para: confirmar postulación, aprobar/rechazar, crear actividad, dar de baja
+
+TARJETAS DE ESTADÍSTICAS:
+· Borde izquierdo 4px: azul=estudiante/tutor, ámbar=jefe, verde=gerente, marino=superusuario
+· Super Usuario: tarjetas funcionan como botones con flecha → y cursor pointer
+· Número: Manrope 32px 700 · Subtítulo: Inter 12px #6B7280
+
+INFORME FINAL — FLUJO:
+· Sistema calcula automáticamente la nota desde promedio de actividades en Bitácora
+· Jefe de Pasantes genera el informe con esa nota pre-cargada
+· Informe visible (solo lectura) para Tutor y Estudiante
+
+INSCRIPCIÓN — REGLA DE APROBACIÓN:
+· Estudiante puede postular a múltiples pasantías
+· Al ser aprobado en una, el sistema marca automáticamente las demás como rechazadas
+· Pantalla "Mi Inscripción" muestra todas en pestañas separadas
+
+ESTADO DE PASANTE (gestionado por Jefe):
+· Estados: Activo · Licencia · Abandono · Conclusión
+· "Dar de baja" requiere motivo + observación
+
+CONSISTENCIA GLOBAL:
+· Manrope solo para títulos y números grandes
+· Inter para todo lo demás
+· Espaciado múltiplos de 8px
+· Sin gradientes ni sombras pesadas
+· Scholar Core en las 14 pantallas del sistema</div>
+            <div class="block-tip">Bloque final con instrucciones de interacción y flujos — SIEMPRE pegar al final para cerrar el prompt.</div>
+        </div>
+
+        <div class="footer">
+            <strong>Instrucciones de uso:</strong> Copia cada bloque en orden (1 al 7) en Stitch o tu plataforma de prototipado.
+            Comienza con Scholar Core, sigue con Logo UMSA, y termina con Estilo e Interacción.
+            <br><br>
+            <strong>Versión:</strong> 4.0 — Abril 2026<br>
+            <strong>Sistema:</strong> Gestión de Pasantías UMSA<br>
+            <strong>Total de pantallas:</strong> 14 (7 autenticación + 7 del sistema)
+        </div>
+    </div>
+
+    <script>
+        function copyToClipboard(elementId) {
+            const element = document.getElementById(elementId);
+            const text = element.innerText;
+            navigator.clipboard.writeText(text).then(() => {
+                const btn = event.target;
+                const originalText = btn.innerText;
+                btn.innerText = '✓ Copiado';
+                btn.classList.add('copied');
+                setTimeout(() => {
+                    btn.innerText = originalText;
+                    btn.classList.remove('copied');
+                }, 2500);
+            });
+        }
+    </script>
+</body>
+</html>
