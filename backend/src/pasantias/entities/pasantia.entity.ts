@@ -25,7 +25,7 @@ export class Pasantia {
   fecha_inicio: Date;
 
   @Column({ type: 'date', nullable: true })
-  fecha_fin: Date;
+  fecha_fin: Date | null;
 
   @Column({
     type: 'enum',

@@ -92,7 +92,7 @@ export class PasantiasController {
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Asignar jefe a pasantía' })
   @ApiResponse({ status: 200, description: 'Jefe asignado' })
-  assignJefe(@Param('id', ParseIntPipe) id: number, @Body('jefe_user_id', ParseIntPipe) jefeUserId: number) {
+  assignJefe(@Param('id', ParseIntPipe) id: number, @Body('jefe_user_id') jefeUserId: number) {
     return this.pasantiasService.assignJefe(id, jefeUserId);
   }
 

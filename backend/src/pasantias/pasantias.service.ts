@@ -90,9 +90,10 @@ export class PasantiasService {
     const pasantia = this.pasantiaRepository.create({
       titulo: dto.titulo,
       descripcion: dto.descripcion,
-      fecha_inicio: new Date(dto.fecha_inicio),
+      fecha_inicio: new Date(`${dto.fecha_inicio}T00:00:00`),
       estado: EstadoPasantia.PENDIENTE,
       area: dto.area,
+      fecha_fin: dto.fecha_fin ? new Date(`${dto.fecha_fin}T00:00:00`) : null,
       empresa: gerente.empresa,
     });
     return this.pasantiaRepository.save(pasantia);
@@ -102,8 +103,11 @@ export class PasantiasService {
     const pasantia = await this.findOne(id);
     if (dto.titulo) pasantia.titulo = dto.titulo;
     if (dto.descripcion) pasantia.descripcion = dto.descripcion;
-    if (dto.fecha_inicio) pasantia.fecha_inicio = new Date(dto.fecha_inicio);
+    if (dto.fecha_inicio) pasantia.fecha_inicio = new Date(`${dto.fecha_inicio}T00:00:00`);
     if (dto.area) pasantia.area = dto.area;
+    if (dto.fecha_fin !== undefined) {
+      pasantia.fecha_fin = dto.fecha_fin ? new Date(`${dto.fecha_fin}T00:00:00`) : null;
+    }
     return this.pasantiaRepository.save(pasantia);
   }
 

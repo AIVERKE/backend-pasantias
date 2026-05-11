@@ -66,7 +66,16 @@
 
         <!-- Table -->
         <div class="overflow-x-auto min-h-[300px]">
-          <table class="w-full text-left border-collapse min-w-[900px]">
+          <!-- Loading State -->
+          <div v-if="loading" class="flex flex-col items-center justify-center py-16 px-4 min-h-[300px]">
+            <div class="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center text-primary mb-4">
+              <v-icon icon="mdi-loading" class="animate-spin" size="32"></v-icon>
+            </div>
+            <h4 class="text-gray-900 font-bold text-lg mb-1">Cargando pasantías</h4>
+            <p class="text-gray-500 text-sm text-center max-w-sm">Estamos obteniendo la información, por favor espera.</p>
+          </div>
+
+          <table v-if="!loading" class="w-full text-left border-collapse min-w-full md:min-w-[900px]">
             <thead class="bg-white">
               <tr>
                 <th class="py-4 px-6 font-medium text-xs text-gray-400 uppercase tracking-wider">Convocatoria</th>
@@ -78,7 +87,7 @@
             </thead>
             <tbody class="divide-y divide-gray-100">
               <TransitionGroup name="list">
-                <tr v-for="item in filteredPasantias" :key="item.id" class="hover:bg-blue-50/30 transition-colors group">
+                <tr v-for="item in filteredPasantias" :key="item.id_pasantia || item.id" class="hover:bg-blue-50/30 transition-colors group">
                   <td class="py-4 px-6">
                     <div class="flex items-center gap-3">
                       <div class="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary flex-shrink-0">
@@ -107,13 +116,15 @@
                         >
                           <v-icon icon="mdi-account-tie" size="14" class="text-gray-400 group-hover/badge:text-red-400"></v-icon>
                           {{ jefe.usuario?.nombre || jefe.nombre }}
-                          <button @click.stop="quitarJefe(item.id_pasantia || item.id, jefe.id_jefe || jefe.id)" class="ml-0.5 text-gray-400 hover:text-red-500 bg-transparent rounded-full hover:bg-red-50 p-0.5" title="Remover jefe">
-                            <v-icon icon="mdi-close" size="12"></v-icon>
+                          <button @click.stop="quitarJefe(item.id_pasantia || item.id, jefe.id_jefe || jefe.id)" class="ml-0.5 text-gray-400 hover:text-red-500 bg-transparent rounded-full hover:bg-red-50 p-0.5 relative" title="Remover jefe" :disabled="procesandoAccion === `${item.id_pasantia || item.id}-${jefe.id_jefe || jefe.id}`">
+                            <v-icon v-if="procesandoAccion === `${item.id_pasantia || item.id}-${jefe.id_jefe || jefe.id}`" icon="mdi-loading" class="animate-spin" size="12"></v-icon>
+                            <v-icon v-else icon="mdi-close" size="12"></v-icon>
                           </button>
                         </span>
                       </div>
-                      <button @click="abrirAsignarJefe(item)" class="inline-flex items-center gap-1 text-xs font-medium text-primary hover:text-blue-700 bg-primary/5 hover:bg-primary/10 px-2.5 py-1 rounded-md transition-colors mt-1">
-                        <v-icon icon="mdi-account-plus-outline" size="14"></v-icon>
+                      <button @click="abrirAsignarJefe(item)" class="inline-flex items-center gap-1 text-xs font-medium text-primary hover:text-blue-700 bg-primary/5 hover:bg-primary/10 px-2.5 py-1 rounded-md transition-colors mt-1" :disabled="procesandoAccion === 'cargarJefes' && pasantiaJefeSeleccionada === (item.id_pasantia || item.id)">
+                        <v-icon v-if="procesandoAccion === 'cargarJefes' && pasantiaJefeSeleccionada === (item.id_pasantia || item.id)" icon="mdi-loading" class="animate-spin" size="14"></v-icon>
+                        <v-icon v-else icon="mdi-account-plus-outline" size="14"></v-icon>
                         <span v-if="!item.jefe_pasantes?.length">Asignar Jefe</span>
                         <span v-else>Añadir otro</span>
                       </button>
@@ -126,7 +137,7 @@
                     <span v-else class="text-xs text-gray-400 italic font-medium">-</span>
                   </td>
                   <td class="py-4 px-6 text-center">
-                    <div class="flex items-center justify-center gap-2 opacity-100 sm:opacity-70 group-hover:opacity-100 transition-opacity">
+                    <div class="flex items-center justify-center gap-2 transition-opacity" :class="{ 'opacity-50 pointer-events-none': procesandoAccion === (item.id_pasantia || item.id), 'opacity-100 sm:opacity-70 group-hover:opacity-100': procesandoAccion !== (item.id_pasantia || item.id) }">
                       
                       <!-- Botones condicionales por estado -->
                       <template v-if="item.estado === 'pendiente'">
@@ -179,7 +190,7 @@
           </table>
           
           <!-- Empty State -->
-          <div v-if="filteredPasantias.length === 0" class="flex flex-col items-center justify-center py-16 px-4">
+          <div v-if="!loading && filteredPasantias.length === 0" class="flex flex-col items-center justify-center py-16 px-4">
             <div class="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center text-gray-300 mb-4">
               <v-icon icon="mdi-file-search-outline" size="40"></v-icon>
             </div>
@@ -300,18 +311,21 @@
               <p class="text-xs font-semibold text-gray-500 mb-3 uppercase tracking-wider">Selecciona un miembro del equipo</p>
               <button
                 v-for="jefe in JefesDisponibles"
-                :key="jefe.userId"
-                @click="asignarJefe(jefe.userId)"
+                :key="jefe.id"
+                @click="asignarJefe(jefe.id)"
                 class="w-full p-3 text-left rounded-xl border border-gray-200 hover:border-primary/50 hover:bg-blue-50/30 transition-all flex items-center gap-3 group"
+                :disabled="procesandoAccion === 'asignarJefe'"
+                :class="{ 'opacity-50 pointer-events-none': procesandoAccion === 'asignarJefe' }"
               >
                 <div class="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 font-bold group-hover:bg-primary/10 group-hover:text-primary transition-colors">
-                  {{ jefe.nombre.charAt(0) }}{{ jefe.apellido.charAt(0) }}
+                  {{ jefe.iniciales || jefe.nombre?.charAt(0) || '' }}
                 </div>
                 <div class="flex-1">
-                  <div class="font-bold text-sm text-gray-800">{{ jefe.nombre }} {{ jefe.apellido }}</div>
+                  <div class="font-bold text-sm text-gray-800">{{ jefe.nombre }}</div>
                   <div class="text-xs text-gray-500">{{ jefe.email }}</div>
                 </div>
-                <v-icon icon="mdi-plus-circle" size="20" class="text-gray-300 group-hover:text-primary transition-colors"></v-icon>
+                <v-icon v-if="procesandoAccion === 'asignarJefe'" icon="mdi-loading" size="20" class="animate-spin text-primary"></v-icon>
+                <v-icon v-else icon="mdi-plus-circle" size="20" class="text-gray-300 group-hover:text-primary transition-colors"></v-icon>
               </button>
             </div>
           </div>
@@ -331,6 +345,7 @@
 import { ref, computed, onMounted } from 'vue'
 import axios from 'axios'
 import { useAuthStore } from '@/stores/auth'
+import Swal from 'sweetalert2'
 
 const authStore = useAuthStore()
 
@@ -344,7 +359,16 @@ const tabs = [
 
 const filters = ref({ titulo: '', area: '', jefe: '' })
 const loading = ref(true)
+const procesandoAccion = ref(null)
 const pasantias = ref([])
+
+const toast = Swal.mixin({
+  toast: true,
+  position: 'top-end',
+  showConfirmButton: false,
+  timer: 3000,
+  timerProgressBar: true
+})
 
 // Utilidad para limpiar filtros
 const limpiarFiltros = () => {
@@ -388,29 +412,21 @@ const abrirCrear = () => {
 
 const abrirEditar = (item) => {
   modoForm.value = 'editar'
-  // Format date correctly for input type="date"
-  let formattedDate = ''
-  if (item.fecha_inicio) {
-    const d = new Date(item.fecha_inicio)
-    if(!isNaN(d.getTime())) {
-      formattedDate = d.toISOString().split('T')[0]
-    }
-  }
-
-  let formattedEndDate = ''
-  if (item.fecha_fin) {
-    const d = new Date(item.fecha_fin)
-    if(!isNaN(d.getTime())) {
-      formattedEndDate = d.toISOString().split('T')[0]
-    }
+  
+  // Función auxiliar para formatear fechas a YYYY-MM-DD sin problemas de zona horaria
+  const formatDateForInput = (dateStr) => {
+    if (!dateStr) return ''
+    const d = new Date(dateStr)
+    if (isNaN(d.getTime())) return ''
+    return d.toISOString().split('T')[0]
   }
 
   formData.value = {
     id: item.id_pasantia || item.id,
     titulo: item.titulo,
     descripcion: item.descripcion || '',
-    fecha_inicio: formattedDate,
-    fecha_fin: formattedEndDate,
+    fecha_inicio: formatDateForInput(item.fecha_inicio),
+    fecha_fin: formatDateForInput(item.fecha_fin),
     area: item.area || ''
   }
   mensaje.value = ''
@@ -452,19 +468,16 @@ const guardarPasantia = async () => {
       await axios.post('/api/pasantias/gerente', payload, {
         headers: { Authorization: `Bearer ${authStore.token}` }
       })
-      mensaje.value = '¡Convocatoria creada exitosamente!'
+      toast.fire({ icon: 'success', title: 'Convocatoria creada exitosamente' })
     } else {
       await axios.patch(`/api/pasantias/${formData.value.id}`, payload, {
         headers: { Authorization: `Bearer ${authStore.token}` }
       })
-      mensaje.value = '¡Convocatoria actualizada!'
+      toast.fire({ icon: 'success', title: 'Convocatoria actualizada' })
     }
     
     await recargarPasantias()
-    
-    setTimeout(() => {
-      cerrarModalForm()
-    }, 1200)
+    cerrarModalForm()
   } catch (err) {
     console.error('Error:', err)
     mensaje.value = 'Error: ' + (err.response?.data?.message || err.message)
@@ -473,47 +486,70 @@ const guardarPasantia = async () => {
   }
 }
 
-// Cambiar estado de pasantía usando enums en mayúsculas
+// Cambiar estado de pasantía usando enums
 const cambiarEstado = async (id, nuevoEstado) => {
+  procesandoAccion.value = id
   try {
     await axios.patch(`/api/pasantias/${id}/estado`, { estado: nuevoEstado }, {
       headers: { Authorization: `Bearer ${authStore.token}` }
     })
     await recargarPasantias()
+    toast.fire({ icon: 'success', title: 'Estado actualizado' })
   } catch (err) {
     console.error('Error:', err)
-    alert('Error al cambiar estado: ' + (err.response?.data?.message || err.message))
+    Swal.fire('Error', 'Error al cambiar estado: ' + (err.response?.data?.message || err.message), 'error')
+  } finally {
+    procesandoAccion.value = null
   }
 }
 
 // Eliminar pasantía
 const eliminarPasantia = async (id) => {
-  if (!confirm('¿Estás seguro de que deseas eliminar permanentemente esta pasantía?')) return
+  const result = await Swal.fire({
+    title: '¿Eliminar convocatoria?',
+    text: 'Esta acción no se puede deshacer',
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#ef4444',
+    confirmButtonText: 'Sí, eliminar',
+    cancelButtonText: 'Cancelar'
+  })
   
+  if (!result.isConfirmed) return
+  
+  procesandoAccion.value = id
   try {
     await axios.delete(`/api/pasantias/${id}`, {
       headers: { Authorization: `Bearer ${authStore.token}` }
     })
     await recargarPasantias()
+    toast.fire({ icon: 'success', title: 'Convocatoria eliminada' })
   } catch (err) {
     console.error('Error:', err)
-    alert('Error al eliminar: ' + (err.response?.data?.message || err.message))
+    Swal.fire('Error', 'Error al eliminar: ' + (err.response?.data?.message || err.message), 'error')
+  } finally {
+    procesandoAccion.value = null
   }
 }
 
 // Abrir modal asignar jefe
 const abrirAsignarJefe = async (item) => {
   pasantiaJefeSeleccionada.value = item.id_pasantia || item.id
+  procesandoAccion.value = 'cargarJefes'
   
-  // Obtener empresaId si no lo tenemos
-  if (!empresaId.value && pasantias.value.length > 0) {
-    try {
-      const perfilRes = await axios.get('/api/auth/profile', {
-        headers: { Authorization: `Bearer ${authStore.token}` }
-      })
-      empresaId.value = perfilRes.data.gerente?.empresa?.id_empresa
-    } catch (err) {
-      console.error('Error al obtener perfil:', err)
+  // Obtener empresaId si no lo tenemos, preferiblemente desde authStore
+  if (!empresaId.value) {
+    if (authStore.user?.gerente?.empresa?.id_empresa) {
+      empresaId.value = authStore.user.gerente.empresa.id_empresa
+    } else {
+      try {
+        const perfilRes = await axios.get('/api/auth/profile', {
+          headers: { Authorization: `Bearer ${authStore.token}` }
+        })
+        empresaId.value = perfilRes.data.gerente?.empresa?.id_empresa
+      } catch (err) {
+        console.error('Error al obtener perfil:', err)
+      }
     }
   }
   
@@ -523,17 +559,28 @@ const abrirAsignarJefe = async (item) => {
       const res = await axios.get(`/api/pasantias/jefes/by-empresa/${empresaId.value}`, {
         headers: { Authorization: `Bearer ${authStore.token}` }
       })
-      JefesDisponibles.value = res.data || []
+      // Mapeamos la respuesta para aplanar la estructura (el backend devuelve JefePasantes con usuario anidado)
+      JefesDisponibles.value = (res.data || []).map(jefe => ({
+        id: jefe.id_jefe,
+        nombre: `${jefe.usuario?.nombre || ''} ${jefe.usuario?.apellido || ''}`.trim(),
+        email: jefe.usuario?.email || '',
+        iniciales: `${jefe.usuario?.nombre?.charAt(0) || ''}${jefe.usuario?.apellido?.charAt(0) || ''}`
+      }))
+      modalJefe.value = true
     } catch (err) {
       console.error('Error al obtener Jefes:', err)
+      Swal.fire('Error', 'No se pudieron cargar los jefes de pasantes', 'error')
     }
+  } else {
+    Swal.fire('Atención', 'Debe configurar su empresa en su perfil primero', 'warning')
   }
   
-  modalJefe.value = true
+  procesandoAccion.value = null
 }
 
 // Asignar jefe
 const asignarJefe = async (jefeUserId) => {
+  procesandoAccion.value = 'asignarJefe'
   try {
     await axios.patch(`/api/pasantias/${pasantiaJefeSeleccionada.value}/jefe`, {
       jefe_user_id: jefeUserId
@@ -542,24 +589,41 @@ const asignarJefe = async (jefeUserId) => {
     })
     modalJefe.value = false
     await recargarPasantias()
+    toast.fire({ icon: 'success', title: 'Jefe asignado correctamente' })
   } catch (err) {
     console.error('Error:', err)
-    alert('Error al asignar jefe: ' + (err.response?.data?.message || err.message))
+    Swal.fire('Error', 'Error al asignar jefe: ' + (err.response?.data?.message || err.message), 'error')
+  } finally {
+    procesandoAccion.value = null
   }
 }
 
 // Quitar un jefe específico de una pasantía
 const quitarJefe = async (pasantiaId, jefeId) => {
-  if (!confirm('¿Quitar a este jefe de la convocatoria?')) return
+  const result = await Swal.fire({
+    title: '¿Quitar jefe?',
+    text: 'Se removerá este jefe de la convocatoria',
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#ef4444',
+    confirmButtonText: 'Sí, remover',
+    cancelButtonText: 'Cancelar'
+  })
   
+  if (!result.isConfirmed) return
+  
+  procesandoAccion.value = `${pasantiaId}-${jefeId}`
   try {
     await axios.delete(`/api/pasantias/${pasantiaId}/jefe?jefe_id=${jefeId}`, {
       headers: { Authorization: `Bearer ${authStore.token}` }
     })
     await recargarPasantias()
+    toast.fire({ icon: 'success', title: 'Jefe removido' })
   } catch (err) {
     console.error('Error:', err)
-    alert('Error al remover jefe: ' + (err.response?.data?.message || err.message))
+    Swal.fire('Error', 'Error al remover jefe: ' + (err.response?.data?.message || err.message), 'error')
+  } finally {
+    procesandoAccion.value = null
   }
 }
 
