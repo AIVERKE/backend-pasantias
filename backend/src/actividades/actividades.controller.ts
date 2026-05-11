@@ -1,8 +1,11 @@
-import { Controller, Get, Post, Patch, Body, Param, ParseIntPipe } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
+import { Controller, Get, Post, Patch, Body, Param, ParseIntPipe, UseGuards, Request } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBearerAuth } from '@nestjs/swagger';
 import { ActividadesService } from './actividades.service';
 import { CreateActividadDto } from './dto/create-actividad.dto';
 import { UpdateActividadDto } from './dto/update-actividad.dto';
+import { CreateTareaDto } from './dto/create-tarea.dto';
+import { UpdateTareaDto } from './dto/update-tarea.dto';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
 @ApiTags('Actividades')
 @Controller('actividades')
@@ -33,4 +36,35 @@ export class ActividadesController {
   update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateActividadDto) {
     return this.actividadesService.update(id, dto);
   }
+
+  // Endpoints para Tareas (Actividades del Jefe)
+
+  @Get('jefe')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Listar tareas asignadas por el jefe' })
+  @ApiResponse({ status: 200, description: 'Lista de tareas' })
+  findTareasByJefe(@Request() req: any) {
+    return this.actividadesService.findTareasByJefe(req.user.id_usuario);
+  }
+
+  @Post('jefe')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Crear una tarea asignada por el jefe' })
+  @ApiResponse({ status: 201, description: 'Tarea creada' })
+  createTarea(@Request() req: any, @Body() dto: CreateTareaDto) {
+    return this.actividadesService.createTarea(req.user.id_usuario, dto);
+  }
+
+  @Patch('jefe/:id')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Actualizar una tarea asignada por el jefe' })
+  @ApiParam({ name: 'id', description: 'ID de la tarea' })
+  @ApiResponse({ status: 200, description: 'Tarea actualizada' })
+  updateTarea(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateTareaDto) {
+    return this.actividadesService.updateTarea(id, dto);
+  }
 }
+

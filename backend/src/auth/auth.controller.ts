@@ -4,6 +4,8 @@ import { AuthService } from './auth.service';
 import { LocalAuthGuard } from './guards/local-auth.guard';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { LoginDto } from './dto/login.dto';
+import { DarDeBajaDto } from './dto/dar-de-baja.dto';
+import { EstadoInscripcion } from '../pasantias/entities/inscripcion.entity';
 import { UsuariosService } from '../usuarios/usuarios.service';
 import { CreateUsuarioDto } from '../usuarios/dto/create-usuario.dto';
 
@@ -96,6 +98,100 @@ export class AuthController {
       return { message: 'Acceso restringido a jefes de pasantes' };
     }
     return this.authService.getJefeInscripciones(req.user.userId);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('jefe/pasantes')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Obtener pasantes a cargo del jefe de pasantes' })
+  @ApiResponse({ status: 200, description: 'Lista de pasantes' })
+  @ApiResponse({ status: 401, description: 'Token inválido o ausente' })
+  @ApiResponse({ status: 403, description: 'Acceso restringido a jefes de pasantes' })
+  async getJefePasantes(@Request() req: any) {
+    if (req.user.tipo !== 'jefe_pasantes' && req.user.tipo !== 'JEFE_PASANTES') {
+      return { message: 'Acceso restringido a jefes de pasantes' };
+    }
+    return this.authService.getJefePasantes(req.user.userId);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('jefe/bitacoras')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Obtener bitácoras a cargo del jefe de pasantes' })
+  @ApiResponse({ status: 200, description: 'Lista de bitácoras' })
+  @ApiResponse({ status: 401, description: 'Token inválido o ausente' })
+  @ApiResponse({ status: 403, description: 'Acceso restringido a jefes de pasantes' })
+  async getJefeBitacoras(@Request() req: any) {
+    if (req.user.tipo !== 'jefe_pasantes' && req.user.tipo !== 'JEFE_PASANTES') {
+      return { message: 'Acceso restringido a jefes de pasantes' };
+    }
+    return this.authService.getJefeBitacoras(req.user.userId);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('jefe/bitacoras/:id/calificar')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Calificar una bitácora' })
+  @ApiResponse({ status: 200, description: 'Bitácora calificada' })
+  @ApiResponse({ status: 401, description: 'Token inválido o ausente' })
+  @ApiResponse({ status: 403, description: 'Acceso restringido a jefes de pasantes' })
+  async calificarBitacora(@Param('id') id: string, @Body() body: { nota: number, observacion?: string }, @Request() req: any) {
+    if (req.user.tipo !== 'jefe_pasantes' && req.user.tipo !== 'JEFE_PASANTES') {
+      return { message: 'Acceso restringido a jefes de pasantes' };
+    }
+    return this.authService.calificarBitacora(+id, body.nota, body.observacion);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('jefe/informes')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Obtener informes finales a cargo del jefe de pasantes' })
+  @ApiResponse({ status: 200, description: 'Lista de informes' })
+  @ApiResponse({ status: 401, description: 'Token inválido o ausente' })
+  @ApiResponse({ status: 403, description: 'Acceso restringido a jefes de pasantes' })
+  async getJefeInformes(@Request() req: any) {
+    if (req.user.tipo !== 'jefe_pasantes' && req.user.tipo !== 'JEFE_PASANTES') {
+      return { message: 'Acceso restringido a jefes de pasantes' };
+    }
+    return this.authService.getJefeInformes(req.user.userId);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('jefe/informes/:id/emitir')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Emitir informe final' })
+  @ApiResponse({ status: 200, description: 'Informe emitido' })
+  @ApiResponse({ status: 401, description: 'Token inválido o ausente' })
+  @ApiResponse({ status: 403, description: 'Acceso restringido a jefes de pasantes' })
+  async emitirInformeFinal(@Param('id') id: string, @Body() body: { apreciacion: string }, @Request() req: any) {
+    if (req.user.tipo !== 'jefe_pasantes' && req.user.tipo !== 'JEFE_PASANTES') {
+      return { message: 'Acceso restringido a jefes de pasantes' };
+    }
+    return this.authService.emitirInformeFinal(+id, body.apreciacion);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('jefe/pasantes/:id/baja')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Dar de baja a un pasante' })
+  @ApiResponse({ status: 200, description: 'Pasante dado de baja' })
+  async darDeBaja(@Param('id') id: string, @Body() dto: DarDeBajaDto, @Request() req: any) {
+    if (req.user.tipo !== 'jefe_pasantes' && req.user.tipo !== 'JEFE_PASANTES') {
+      return { message: 'Acceso restringido a jefes de pasantes' };
+    }
+    return this.authService.darDeBaja(+id, dto.motivo, dto.observacion);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Patch('jefe/pasantes/:id/estado')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Cambiar estado de un pasante' })
+  @ApiResponse({ status: 200, description: 'Estado actualizado' })
+  async cambiarEstado(@Param('id') id: string, @Body() dto: { estado: EstadoInscripcion }, @Request() req: any) {
+    if (req.user.tipo !== 'jefe_pasantes' && req.user.tipo !== 'JEFE_PASANTES') {
+      return { message: 'Acceso restringido a jefes de pasantes' };
+    }
+    return this.authService.cambiarEstado(+id, dto.estado);
   }
 
   @UseGuards(JwtAuthGuard)

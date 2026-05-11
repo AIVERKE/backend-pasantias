@@ -14,7 +14,7 @@
     <!-- Tabla de Actividades -->
     <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
       <div class="overflow-x-auto">
-        <table class="w-full text-left border-collapse min-w-[800px]">
+        <table class="w-full text-left border-collapse">
           <thead class="bg-neutral border-b border-gray-200">
             <tr>
               <th class="py-3 px-6 font-body text-xs font-semibold text-gray-500 uppercase">Actividad</th>
@@ -70,7 +70,7 @@
                 </span>
               </td>
               <td class="py-4 px-6 text-center">
-                <button class="w-7 h-7 rounded-md bg-neutral text-gray-500 hover:bg-primary hover:text-white transition-colors flex items-center justify-center mx-auto" title="Editar">
+                <button @click="abrirModalEditar(item)" class="w-7 h-7 rounded-md bg-neutral text-gray-500 hover:bg-primary hover:text-white transition-colors flex items-center justify-center mx-auto" title="Editar">
                   <v-icon icon="mdi-pencil-outline" size="16"></v-icon>
                 </button>
               </td>
@@ -130,10 +130,7 @@
             <label class="block text-xs font-semibold text-gray-500 mb-1.5">Seleccionar Pasante</label>
             <select v-model="nuevaActividad.pasanteAsignado" class="w-full bg-white border border-gray-200 rounded-lg py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary">
               <option value="">Selecciona uno...</option>
-              <option value="Carlos Ramos">Carlos Ramos</option>
-              <option value="Luis Blanco">Luis Blanco</option>
-              <option value="Andrea Pérez">Andrea Pérez</option>
-              <option value="María Quispe">María Quispe</option>
+              <option v-for="ins in inscripciones" :key="ins.id" :value="ins.id">{{ ins.nombre }}</option>
             </select>
           </div>
 
@@ -160,16 +157,46 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
+import axios from 'axios'
 
 const filters = ref({ titulo: '', asignado: '', fecha: '', estado: '' })
+const actividades = ref([])
+const inscripciones = ref([])
 
-const actividades = ref([
-  { id: 1, titulo: 'Entrega de Diseño UI', descripcion: 'Subir los mockups en Figma', asignado: 'María Quispe', fechaLimite: '28/04/2026', estado: 'Activo' },
-  { id: 2, titulo: 'Evaluación de Medio Término', descripcion: 'Completar el cuestionario de autoevaluación', asignado: 'Todos', fechaLimite: '30/04/2026', estado: 'Activo' },
-  { id: 3, titulo: 'Revisión de Base de Datos', descripcion: 'Script de migración para entorno de QA', asignado: 'Andrea Pérez', fechaLimite: '20/04/2026', estado: 'Vencido' },
-  { id: 4, titulo: 'Setup de Entorno Local', descripcion: 'Instalar Docker y correr los contenedores', asignado: 'Todos', fechaLimite: '05/03/2026', estado: 'Completado' },
-])
+const token = localStorage.getItem('access_token')
+
+const cargarDatos = async () => {
+  try {
+    const [actividadesRes, inscripcionesRes] = await Promise.all([
+      axios.get('/api/actividades/jefe', { headers: { Authorization: `Bearer ${token}` } }),
+      axios.get('/api/auth/jefe/inscripciones', { headers: { Authorization: `Bearer ${token}` } })
+    ])
+
+    // Mapear actividades
+    actividades.value = actividadesRes.data.map(t => ({
+      id: t.id_tarea,
+      titulo: t.titulo,
+      descripcion: t.descripcion,
+      asignado: t.inscripcion ? `${t.inscripcion.estudiante.usuario.nombre} ${t.inscripcion.estudiante.usuario.apellido}` : 'Todos',
+      fechaLimite: new Date(t.fecha_limite).toLocaleDateString('es-BO'),
+      estado: t.estado,
+      id_inscripcion: t.inscripcion ? t.inscripcion.id_inscripcion : null
+    }))
+
+    // Mapear inscripciones para el select
+    inscripciones.value = inscripcionesRes.data.map(i => ({
+      id: i.id,
+      nombre: i.estudiante
+    }))
+  } catch (error) {
+    console.error('Error cargando datos:', error)
+  }
+}
+
+onMounted(() => {
+  cargarDatos()
+})
 
 const filteredActividades = computed(() => {
   return actividades.value.filter(item => {
@@ -183,6 +210,9 @@ const filteredActividades = computed(() => {
 
 // Lógica del Modal
 const modalAbierto = ref(false)
+const esEdicion = ref(false)
+const actividadEditandoId = ref(null)
+
 const nuevaActividad = ref({
   titulo: '',
   descripcion: '',
@@ -192,6 +222,8 @@ const nuevaActividad = ref({
 })
 
 const abrirModalCrear = () => {
+  esEdicion.value = false
+  actividadEditandoId.value = null
   nuevaActividad.value = {
     titulo: '',
     descripcion: '',
@@ -202,22 +234,41 @@ const abrirModalCrear = () => {
   modalAbierto.value = true
 }
 
-const guardarActividad = () => {
+const abrirModalEditar = (actividad) => {
+  esEdicion.value = true
+  actividadEditandoId.value = actividad.id
+  nuevaActividad.value = {
+    titulo: actividad.titulo,
+    descripcion: actividad.descripcion,
+    tipoAsignacion: actividad.asignado === 'Todos' ? 'todos' : 'especifico',
+    pasanteAsignado: actividad.id_inscripcion || '',
+    // Convertir DD/MM/YYYY a YYYY-MM-DD para el input date
+    fechaLimite: actividad.fechaLimite.split('/').reverse().join('-')
+  }
+  modalAbierto.value = true
+}
+
+const guardarActividad = async () => {
   if (!nuevaActividad.value.titulo || !nuevaActividad.value.fechaLimite) return
   
-  // Convertir YYYY-MM-DD a DD/MM/YYYY
-  const dateObj = new Date(nuevaActividad.value.fechaLimite)
-  const fechaFormatted = `${dateObj.getDate() + 1}/${dateObj.getMonth() + 1}/${dateObj.getFullYear()}`
-
-  actividades.value.unshift({
-    id: actividades.value.length + 1,
+  const payload = {
     titulo: nuevaActividad.value.titulo,
     descripcion: nuevaActividad.value.descripcion,
-    asignado: nuevaActividad.value.tipoAsignacion === 'todos' ? 'Todos' : nuevaActividad.value.pasanteAsignado,
-    fechaLimite: fechaFormatted,
-    estado: 'Activo'
-  })
-  
-  modalAbierto.value = false
+    fecha_limite: nuevaActividad.value.fechaLimite,
+    id_inscripcion: nuevaActividad.value.tipoAsignacion === 'todos' ? null : nuevaActividad.value.pasanteAsignado
+  }
+
+  try {
+    if (esEdicion.value) {
+      await axios.patch(`/api/actividades/jefe/${actividadEditandoId.value}`, payload, { headers: { Authorization: `Bearer ${token}` } })
+    } else {
+      await axios.post('/api/actividades/jefe', payload, { headers: { Authorization: `Bearer ${token}` } })
+    }
+    
+    modalAbierto.value = false
+    cargarDatos() // Recargar datos
+  } catch (error) {
+    console.error('Error guardando actividad:', error)
+  }
 }
 </script>

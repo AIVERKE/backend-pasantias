@@ -51,6 +51,19 @@
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-100">
+            <tr v-if="loading">
+              <td colspan="6" class="py-12 text-center text-gray-500 text-sm">
+                <div class="flex items-center justify-center gap-2">
+                  <div class="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+                  Cargando inscripciones...
+                </div>
+              </td>
+            </tr>
+            <tr v-else-if="error">
+              <td colspan="6" class="py-12 text-center text-danger text-sm">
+                {{ error }}
+              </td>
+            </tr>
             <tr v-for="item in filteredInscripciones" :key="item.id" class="hover:bg-neutral/50 transition-colors">
               <td class="py-3 px-6">
                 <div class="flex items-center gap-3">
@@ -78,19 +91,19 @@
               </td>
               <td class="py-3 px-6 text-center">
                 <div class="flex items-center justify-center gap-2">
-                  <button class="w-7 h-7 rounded-md bg-neutral text-gray-500 hover:bg-primary hover:text-white transition-colors flex items-center justify-center" title="Ver detalles">
+                  <button @click="verDetalles(item.id)" class="w-7 h-7 rounded-md bg-neutral text-gray-500 hover:bg-primary hover:text-white transition-colors flex items-center justify-center" title="Ver detalles">
                     <v-icon icon="mdi-eye-outline" size="16"></v-icon>
                   </button>
-                  <button v-if="item.estado === 'Pendiente'" class="w-7 h-7 rounded-md bg-neutral text-success hover:bg-success hover:text-white transition-colors flex items-center justify-center" title="Aprobar">
+                  <button v-if="item.estado === 'Pendiente'" @click="evaluar(item.id, 'aprobada')" class="w-7 h-7 rounded-md bg-neutral text-success hover:bg-success hover:text-white transition-colors flex items-center justify-center" title="Aprobar">
                     <v-icon icon="mdi-check" size="16"></v-icon>
                   </button>
-                  <button v-if="item.estado === 'Pendiente'" class="w-7 h-7 rounded-md bg-neutral text-danger hover:bg-danger hover:text-white transition-colors flex items-center justify-center" title="Rechazar">
+                  <button v-if="item.estado === 'Pendiente'" @click="evaluar(item.id, 'rechazada')" class="w-7 h-7 rounded-md bg-neutral text-danger hover:bg-danger hover:text-white transition-colors flex items-center justify-center" title="Rechazar">
                     <v-icon icon="mdi-close" size="16"></v-icon>
                   </button>
                 </div>
               </td>
             </tr>
-            <tr v-if="filteredInscripciones.length === 0">
+            <tr v-if="!loading && !error && filteredInscripciones.length === 0">
               <td colspan="6" class="py-12 text-center text-gray-500 text-sm">
                 No se encontraron inscripciones que coincidan con los filtros.
               </td>
@@ -116,16 +129,32 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
+import axios from 'axios'
+import { useAuthStore } from '@/stores/auth'
+
+const authStore = useAuthStore()
 
 const activeTab = ref('pendientes')
 
-const tabs = [
-  { id: 'pendientes', label: 'Pendientes', badge: '3' },
-  { id: 'aprobadas', label: 'Aprobadas' },
-  { id: 'rechazadas', label: 'Rechazadas' },
-  { id: 'todas', label: 'Todas' }
-]
+const loading = ref(true)
+const error = ref(null)
+
+const inscripciones = ref([])
+
+const tabs = computed(() => {
+  const pendientes = inscripciones.value.filter(i => i.estado === 'Pendiente').length
+  const aprobadas = inscripciones.value.filter(i => i.estado === 'Aprobada').length
+  const rechazadas = inscripciones.value.filter(i => i.estado === 'Rechazada').length
+  const todas = inscripciones.value.length
+
+  return [
+    { id: 'pendientes', label: 'Pendientes', badge: pendientes > 0 ? pendientes.toString() : null },
+    { id: 'aprobadas', label: 'Aprobadas', badge: aprobadas > 0 ? aprobadas.toString() : null },
+    { id: 'rechazadas', label: 'Rechazadas', badge: rechazadas > 0 ? rechazadas.toString() : null },
+    { id: 'todas', label: 'Todas', badge: todas > 0 ? todas.toString() : null }
+  ]
+})
 
 const filters = ref({
   estudiante: '',
@@ -135,14 +164,22 @@ const filters = ref({
   estado: ''
 })
 
-const inscripciones = ref([
-  { id: 1, iniciales: 'AL', estudiante: 'Ana López', ci: '8392123 LP', pasantia: 'Desarrollador Frontend Jr.', fecha: '23/04/2026', estado: 'Pendiente' },
-  { id: 2, iniciales: 'CM', estudiante: 'Carlos Mendoza', ci: '6283920 LP', pasantia: 'Analista de Datos', fecha: '22/04/2026', estado: 'Pendiente' },
-  { id: 3, iniciales: 'RJ', estudiante: 'Roberto Jiménez', ci: '7382910 LP', pasantia: 'Soporte Técnico', fecha: '21/04/2026', estado: 'Pendiente' },
-  { id: 4, iniciales: 'MQ', estudiante: 'María Quispe', ci: '9203812 LP', pasantia: 'Desarrollador Frontend Jr.', fecha: '20/04/2026', estado: 'Aprobada' },
-  { id: 5, iniciales: 'FV', estudiante: 'Fernando Vargas', ci: '5928371 LP', pasantia: 'Diseñador UI/UX', fecha: '19/04/2026', estado: 'Rechazada' },
-  { id: 6, iniciales: 'LB', estudiante: 'Luis Blanco', ci: '4829102 SC', pasantia: 'Asistente de Marketing', fecha: '18/04/2026', estado: 'Aprobada' }
-])
+const loadData = async () => {
+  try {
+    loading.value = true
+    const res = await axios.get('/api/auth/jefe/inscripciones', {
+      headers: { Authorization: `Bearer ${authStore.token}` }
+    })
+    inscripciones.value = res.data
+  } catch (err) {
+    console.error('Error cargando inscripciones:', err)
+    error.value = 'No se pudieron cargar las inscripciones.'
+  } finally {
+    loading.value = false
+  }
+}
+
+onMounted(loadData)
 
 const filteredInscripciones = computed(() => {
   return inscripciones.value.filter(item => {
@@ -161,4 +198,29 @@ const filteredInscripciones = computed(() => {
     return true
   })
 })
+
+const verDetalles = (id) => {
+  alert(`Ver detalles de inscripción ${id}`)
+}
+
+const evaluar = async (id, nuevoEstado) => {
+  try {
+    loading.value = true
+    await axios.patch(`/api/inscripciones/${id}/evaluacion`, {
+      estado: nuevoEstado
+    }, {
+      headers: { Authorization: `Bearer ${authStore.token}` }
+    })
+    
+    // Recargar datos
+    await loadData()
+    
+    alert(`Inscripción ${nuevoEstado === 'aprobada' ? 'aprobada' : 'rechazada'} con éxito.`)
+  } catch (err) {
+    console.error('Error evaluando inscripción:', err)
+    alert('No se pudo completar la acción.')
+  } finally {
+    loading.value = false
+  }
+}
 </script>

@@ -14,12 +14,13 @@ import { Usuario } from '../usuarios/entities/usuario.entity';
 import { Pasantia } from '../pasantias/entities/pasantia.entity';
 import { Inscripcion } from '../pasantias/entities/inscripcion.entity';
 import { InformeFinal } from '../documentos/entities/informe-final.entity';
+import { Bitacora } from '../documentos/entities/bitacora.entity';
 
 @Module({
   imports: [
     UsuariosModule,
     PassportModule,
-    TypeOrmModule.forFeature([Empresa, InformacionEmpresa, Usuario, Pasantia, Inscripcion, InformeFinal]),
+    TypeOrmModule.forFeature([Empresa, InformacionEmpresa, Usuario, Pasantia, Inscripcion, InformeFinal, Bitacora]),
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => ({

@@ -48,6 +48,12 @@ export class Inscripcion {
   @JoinColumn({ name: 'id_jefe' })
   jefe: JefePasantes;
 
+  @Column({ nullable: true })
+  motivo_baja: string;
+
+  @Column({ type: 'text', nullable: true })
+  observacion_baja: string;
+
   @CreateDateColumn({ name: 'created_at' })
   created_at: Date;
 

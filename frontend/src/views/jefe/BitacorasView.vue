@@ -3,7 +3,7 @@
     <!-- Tabla de Bitácoras (Main Content) -->
     <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden flex-1 flex flex-col">
       <div class="overflow-x-auto flex-1">
-        <table class="w-full text-left border-collapse min-w-[800px]">
+        <table class="w-full text-left border-collapse">
           <thead class="bg-neutral border-b border-gray-200 sticky top-0 z-10">
             <tr>
               <th class="py-3 px-6 font-body text-xs font-semibold text-gray-500 uppercase">Estudiante</th>
@@ -96,10 +96,7 @@
           </h4>
           <div class="bg-neutral p-4 rounded-lg space-y-3 border border-gray-100">
             <div class="text-sm text-secondary">
-              <strong>1. Diseño de Interfaz:</strong> Se completaron los mockups para el módulo de tutores.
-            </div>
-            <div class="text-sm text-secondary">
-              <strong>2. Revisión con el equipo:</strong> Reunión semanal para aprobación de prototipos de alta fidelidad y discusión técnica.
+              {{ bitacoraActiva.actividad }}
             </div>
           </div>
         </div>
@@ -145,16 +142,25 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
+import axios from 'axios'
 
 const filters = ref({ estudiante: '', semana: '', fecha: '', estado: '' })
 
-const bitacoras = ref([
-  { id: 1, iniciales: 'AL', estudiante: 'Ana López', semana: 4, fechaEnvio: '23/04/2026', estado: 'Pendiente', nota: null, obs: '' },
-  { id: 2, iniciales: 'CM', estudiante: 'Carlos Mendoza', semana: 4, fechaEnvio: '22/04/2026', estado: 'Pendiente', nota: null, obs: '' },
-  { id: 3, iniciales: 'RJ', estudiante: 'Roberto Jiménez', semana: 3, fechaEnvio: '15/04/2026', estado: 'Calificada', nota: 85, obs: 'Buen trabajo esta semana.' },
-  { id: 4, iniciales: 'LB', estudiante: 'Luis Blanco', semana: 2, fechaEnvio: '08/04/2026', estado: 'Calificada', nota: 90, obs: 'Excelente progreso.' }
-])
+const bitacoras = ref([])
+
+const loadBitacoras = async () => {
+  try {
+    const response = await axios.get('/api/auth/jefe/bitacoras')
+    bitacoras.value = response.data
+  } catch (error) {
+    console.error('Error cargando bitácoras:', error)
+  }
+}
+
+onMounted(() => {
+  loadBitacoras()
+})
 
 const filteredBitacoras = computed(() => {
   return bitacoras.value.filter(item => {
@@ -184,12 +190,25 @@ const cerrarPanel = () => {
   setTimeout(() => { bitacoraActiva.value = null }, 300) // esperar animación
 }
 
-const guardarCalificacion = () => {
+const guardarCalificacion = async () => {
   if (bitacoraActiva.value) {
-    bitacoraActiva.value.estado = 'Calificada'
-    bitacoraActiva.value.nota = notaActual.value
-    bitacoraActiva.value.obs = observacionActual.value
+    try {
+      await axios.post(`/api/auth/jefe/bitacoras/${bitacoraActiva.value.id}/calificar`, {
+        nota: +notaActual.value,
+        observacion: observacionActual.value
+      })
+      
+      // Actualizar localmente
+      bitacoraActiva.value.estado = 'Calificada'
+      bitacoraActiva.value.nota = +notaActual.value
+      bitacoraActiva.value.obs = observacionActual.value
+      
+      cerrarPanel()
+      loadBitacoras() // Recargar para estar seguros
+    } catch (error) {
+      console.error('Error al guardar calificación:', error)
+      alert('Error al guardar calificación')
+    }
   }
-  cerrarPanel()
 }
 </script>

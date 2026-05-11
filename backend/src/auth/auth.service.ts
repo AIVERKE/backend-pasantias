@@ -2,7 +2,7 @@ import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/commo
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, IsNull } from 'typeorm';
+import { Repository, IsNull, In, Not } from 'typeorm';
 import { UsuariosService } from '../usuarios/usuarios.service';
 import { Empresa } from '../empresas/entities/empresa.entity';
 import { InformacionEmpresa } from '../empresas/entities/informacion-empresa.entity';
@@ -11,6 +11,7 @@ import { TipoUsuario } from '../usuarios/entities/usuario.entity';
 import { Inscripcion, EstadoInscripcion } from '../pasantias/entities/inscripcion.entity';
 import { Pasantia, EstadoPasantia } from '../pasantias/entities/pasantia.entity';
 import { InformeFinal } from '../documentos/entities/informe-final.entity';
+import { Bitacora } from '../documentos/entities/bitacora.entity';
 import { CreateUsuarioDto } from '../usuarios/dto/create-usuario.dto';
 
 @Injectable()
@@ -28,6 +29,8 @@ export class AuthService {
     private readonly infoEmpresaRepository: Repository<InformacionEmpresa>,
     @InjectRepository(InformeFinal)
     private readonly informeRepository: Repository<InformeFinal>,
+    @InjectRepository(Bitacora)
+    private readonly bitacoraRepository: Repository<Bitacora>,
   ) {}
 
   async validateUser(email: string, pass: string): Promise<any> {
@@ -209,6 +212,172 @@ export class AuthService {
       fecha: ins.fecha_inscripcion ? new Date(ins.fecha_inscripcion).toLocaleDateString('es-BO') : 'S/F',
       estado: ins.estado === EstadoInscripcion.PENDIENTE ? 'Pendiente' : ins.estado === EstadoInscripcion.APROBADA ? 'Aprobada' : 'Rechazada'
     }));
+  }
+
+  async getJefePasantes(jefeUserId: number) {
+    const inscripciones = await this.inscripcionRepository.find({
+      where: [
+        { jefe: { id_jefe: jefeUserId }, estado: In([EstadoInscripcion.APROBADA, EstadoInscripcion.COMPLETADA]) },
+        { jefe: { id_jefe: jefeUserId }, estado: EstadoInscripcion.RECHAZADA, motivo_baja: Not(IsNull()) }
+      ],
+      relations: ['estudiante', 'estudiante.usuario', 'pasantia'],
+      order: { created_at: 'DESC' }
+    });
+
+    return inscripciones.map(ins => ({
+      id: ins.id_inscripcion,
+      iniciales: ins.estudiante?.usuario ? `${ins.estudiante.usuario.nombre[0]}${ins.estudiante.usuario.apellido[0]}`.toUpperCase() : '??',
+      estudiante: ins.estudiante?.usuario ? `${ins.estudiante.usuario.nombre} ${ins.estudiante.usuario.apellido}` : 'Desconocido',
+      ci: ins.estudiante?.registro_universitario || 'S/N',
+      pasantia: ins.pasantia?.titulo || 'Sin título',
+      fechaInicio: ins.fecha_inicio_periodo ? new Date(ins.fecha_inicio_periodo).toLocaleDateString('es-BO') : 'S/F',
+      progreso: 0,
+      estado: ins.estado
+    }));
+  }
+
+  async getJefeBitacoras(jefeUserId: number) {
+    const bitacoras = await this.bitacoraRepository.find({
+      where: {
+        inscripcion: { jefe: { id_jefe: jefeUserId } }
+      },
+      relations: ['inscripcion', 'inscripcion.estudiante', 'inscripcion.estudiante.usuario', 'actividad'],
+      order: { fecha: 'DESC' }
+    });
+
+    return bitacoras.map(bit => ({
+      id: bit.id_bitacora,
+      iniciales: bit.inscripcion?.estudiante?.usuario ? `${bit.inscripcion.estudiante.usuario.nombre[0]}${bit.inscripcion.estudiante.usuario.apellido[0]}`.toUpperCase() : '??',
+      estudiante: bit.inscripcion?.estudiante?.usuario ? `${bit.inscripcion.estudiante.usuario.nombre} ${bit.inscripcion.estudiante.usuario.apellido}` : 'Desconocido',
+      semana: bit.fecha && bit.inscripcion?.fecha_inicio_periodo ? 
+        Math.floor((new Date(bit.fecha).getTime() - new Date(bit.inscripcion.fecha_inicio_periodo).getTime()) / (1000 * 60 * 60 * 24 * 7)) + 1 : 1,
+      fechaEnvio: bit.fecha ? new Date(bit.fecha).toLocaleDateString('es-BO') : 'S/F',
+      estado: bit.porcentaje > 0 ? 'Calificada' : 'Pendiente',
+      nota: bit.porcentaje,
+      obs: bit.observaciones || '',
+      actividad: bit.actividad?.descripcion || 'Sin descripción'
+    }));
+  }
+
+  async calificarBitacora(id: number, nota: number, observacion?: string) {
+    const bitacora = await this.bitacoraRepository.findOne({
+      where: { id_bitacora: id }
+    });
+
+    if (!bitacora) {
+      throw new NotFoundException('Bitácora no encontrada');
+    }
+
+    bitacora.porcentaje = nota;
+    bitacora.observaciones = observacion || '';
+
+    return this.bitacoraRepository.save(bitacora);
+  }
+
+  async getJefeInformes(jefeUserId: number) {
+    const inscripciones = await this.inscripcionRepository.find({
+      where: [
+        { jefe: { id_jefe: jefeUserId }, estado: EstadoInscripcion.APROBADA },
+        { jefe: { id_jefe: jefeUserId }, estado: EstadoInscripcion.COMPLETADA }
+      ],
+      relations: ['estudiante', 'estudiante.usuario', 'pasantia'],
+      order: { created_at: 'DESC' }
+    });
+
+    const result = [];
+    for (const ins of inscripciones) {
+      const bitacoras = await this.bitacoraRepository.find({
+        where: { inscripcion: { id_inscripcion: ins.id_inscripcion } }
+      });
+
+      const total = bitacoras.length;
+      const evaluadas = bitacoras.filter(b => b.porcentaje > 0).length;
+      const sumaNotas = bitacoras.reduce((acc, b) => acc + (b.porcentaje || 0), 0);
+      const promedio = total > 0 ? Math.round(sumaNotas / total) : 0;
+
+      const informe = await this.informeRepository.findOne({
+        where: { inscripcion: { id_inscripcion: ins.id_inscripcion } }
+      });
+
+      result.push({
+        id: ins.id_inscripcion,
+        informeId: informe?.id_informe || null,
+        iniciales: ins.estudiante?.usuario ? `${ins.estudiante.usuario.nombre[0]}${ins.estudiante.usuario.apellido[0]}`.toUpperCase() : '??',
+        estudiante: ins.estudiante?.usuario ? `${ins.estudiante.usuario.nombre} ${ins.estudiante.usuario.apellido}` : 'Desconocido',
+        pasantia: ins.pasantia?.titulo || 'Sin título',
+        bitacorasEvaluadas: evaluadas,
+        totalBitacoras: total,
+        notaSugerida: promedio,
+        estado: informe ? 'Emitido' : 'Pendiente',
+        contenido: informe?.contenido || '',
+        notaFinal: informe?.nota_final || null
+      });
+    }
+
+    return result;
+  }
+
+  async emitirInformeFinal(inscripcionId: number, apreciacion: string) {
+    const inscripcion = await this.inscripcionRepository.findOne({
+      where: { id_inscripcion: inscripcionId },
+      relations: ['jefe']
+    });
+
+    if (!inscripcion) {
+      throw new NotFoundException('Inscripción no encontrada');
+    }
+
+    // Calcular nota sugerida
+    const bitacoras = await this.bitacoraRepository.find({
+      where: { inscripcion: { id_inscripcion: inscripcionId } }
+    });
+
+    const total = bitacoras.length;
+    const sumaNotas = bitacoras.reduce((acc, b) => acc + (b.porcentaje || 0), 0);
+    const promedio = total > 0 ? Math.round(sumaNotas / total) : 0;
+
+    // Crear informe
+    const informe = new InformeFinal();
+    informe.inscripcion = inscripcion;
+    informe.jefe = inscripcion.jefe;
+    informe.fecha_entrega = new Date();
+    informe.contenido = apreciacion;
+    informe.nota_final = promedio;
+
+    return this.informeRepository.save(informe);
+  }
+
+  async darDeBaja(id: number, motivo: string, observacion?: string) {
+    const inscripcion = await this.inscripcionRepository.findOne({
+      where: { id_inscripcion: id }
+    });
+
+    if (!inscripcion) {
+      throw new NotFoundException('Inscripción no encontrada');
+    }
+
+    inscripcion.estado = EstadoInscripcion.RECHAZADA;
+    inscripcion.motivo_baja = motivo;
+    inscripcion.observacion_baja = observacion || '';
+
+    await this.inscripcionRepository.save(inscripcion);
+
+    return { message: 'Pasante dado de baja correctamente' };
+  }
+
+  async cambiarEstado(id: number, estado: EstadoInscripcion) {
+    const inscripcion = await this.inscripcionRepository.findOne({
+      where: { id_inscripcion: id }
+    });
+
+    if (!inscripcion) {
+      throw new NotFoundException('Inscripción no encontrada');
+    }
+
+    inscripcion.estado = estado;
+    await this.inscripcionRepository.save(inscripcion);
+
+    return { message: 'Estado actualizado correctamente' };
   }
 
   async getGerenteEmpresa(gerenteUserId: number) {

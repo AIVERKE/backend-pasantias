@@ -179,7 +179,7 @@ const menuItems = computed(() => {
   } else if (isJefe.value) {
     return [
       { label: 'Panel Principal', path: '/jefe/dashboard', icon: 'mdi-view-dashboard' },
-      { label: 'Inscripciones', path: '/jefe/inscripciones', icon: 'mdi-inbox-arrow-down', badge: '3' },
+      { label: 'Inscripciones', path: '/jefe/inscripciones', icon: 'mdi-inbox-arrow-down' },
       { label: 'Mis Pasantes', path: '/jefe/pasantes', icon: 'mdi-account-hard-hat' },
       { label: 'Bitácoras', path: '/jefe/bitacoras', icon: 'mdi-notebook-check' },
       { label: 'Informes Finales', path: '/jefe/informes', icon: 'mdi-file-certificate' },

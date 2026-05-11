@@ -3,7 +3,7 @@
     <!-- Tabla de Pasantes con Filtros Inline -->
     <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
       <div class="overflow-x-auto">
-        <table class="w-full text-left border-collapse min-w-[800px]">
+        <table class="w-full text-left border-collapse">
           <thead class="bg-neutral border-b border-gray-200">
             <!-- Títulos de Columnas -->
             <tr>
@@ -23,10 +23,9 @@
               <th class="px-3 py-2">
                 <select class="w-full bg-neutral text-xs rounded border-none py-1.5 px-2 focus:ring-1 focus:ring-primary" v-model="filters.estado">
                   <option value="">Todos</option>
-                  <option value="Activo">Activo</option>
-                  <option value="Licencia">Licencia</option>
-                  <option value="Abandono">Abandono</option>
-                  <option value="Conclusión">Conclusión</option>
+                  <option value="aprobada">Aprobada</option>
+                  <option value="completada">Completada</option>
+                  <option value="rechazada">Rechazada</option>
                 </select>
               </th>
               <th class="px-3 py-2"></th>
@@ -55,23 +54,23 @@
               <td class="py-3 px-6">
                 <select 
                   v-model="item.estado"
+                  @change="cambiarEstado(item, item.estado)"
                   class="bg-white border border-gray-200 text-xs rounded py-1 px-2 focus:ring-1 focus:ring-primary focus:border-primary font-medium"
                   :class="{
-                    'text-success': item.estado === 'Activo' || item.estado === 'Conclusión',
-                    'text-[#D16900]': item.estado === 'Licencia',
-                    'text-danger': item.estado === 'Abandono'
+                    'text-success': item.estado === 'aprobada' || item.estado === 'completada',
+                    'text-danger': item.estado === 'rechazada'
                   }"
                 >
-                  <option value="Activo" class="text-secondary">Activo</option>
-                  <option value="Licencia" class="text-secondary">Licencia</option>
-                  <option value="Conclusión" class="text-secondary">Conclusión</option>
+                  <option value="aprobada" class="text-secondary">Aprobada</option>
+                  <option value="completada" class="text-secondary">Completada</option>
+                  <option value="rechazada" class="text-secondary" disabled>Rechazada</option>
                 </select>
               </td>
               <td class="py-3 px-6 text-center">
                 <button 
                   @click="abrirModalBaja(item)"
                   class="text-[11px] font-bold text-danger hover:text-white border border-danger hover:bg-danger px-2 py-1 rounded transition-colors"
-                  v-if="item.estado === 'Activo' || item.estado === 'Licencia'"
+                  v-if="item.estado === 'aprobada'"
                 >
                   Dar de baja
                 </button>
@@ -107,7 +106,7 @@
           
           <div>
             <label class="block text-xs font-semibold text-gray-500 mb-1">Motivo principal</label>
-            <select class="w-full bg-neutral border border-gray-200 rounded-lg py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-danger/20 focus:border-danger">
+            <select v-model="motivoBaja" class="w-full bg-neutral border border-gray-200 rounded-lg py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-danger/20 focus:border-danger">
               <option value="">Selecciona un motivo...</option>
               <option value="1">Ausencia injustificada prolongada</option>
               <option value="2">Incumplimiento de tareas</option>
@@ -119,6 +118,7 @@
           <div>
             <label class="block text-xs font-semibold text-gray-500 mb-1">Observación detallada</label>
             <textarea 
+              v-model="observacionBaja"
               rows="3" 
               class="w-full bg-neutral border border-gray-200 rounded-lg py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-danger/20 focus:border-danger"
               placeholder="Explica brevemente los detalles de la baja..."
@@ -139,7 +139,14 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
+import axios from 'axios'
+import { useAuthStore } from '@/stores/auth'
+
+const authStore = useAuthStore()
+
+const loading = ref(true)
+const error = ref(null)
 
 const filters = ref({
   estudiante: '',
@@ -148,13 +155,26 @@ const filters = ref({
   estado: ''
 })
 
-const pasantes = ref([
-  { id: 1, iniciales: 'MQ', estudiante: 'María Quispe', pasantia: 'Desarrollador Frontend Jr.', fechaInicio: '01/03/2026', progreso: 45, estado: 'Activo' },
-  { id: 2, iniciales: 'LB', estudiante: 'Luis Blanco', pasantia: 'Asistente de Marketing', fechaInicio: '15/02/2026', progreso: 80, estado: 'Activo' },
-  { id: 3, iniciales: 'CR', estudiante: 'Carlos Ramos', pasantia: 'Soporte Técnico', fechaInicio: '10/01/2026', progreso: 100, estado: 'Conclusión' },
-  { id: 4, iniciales: 'AP', estudiante: 'Andrea Pérez', pasantia: 'Desarrollador Backend', fechaInicio: '20/03/2026', progreso: 10, estado: 'Licencia' },
-  { id: 5, iniciales: 'JG', estudiante: 'Jorge Gómez', pasantia: 'Analista de Datos', fechaInicio: '05/02/2026', progreso: 30, estado: 'Abandono' }
-])
+const pasantes = ref([])
+
+const loadData = async () => {
+  try {
+    loading.value = true
+    const res = await axios.get('/api/auth/jefe/pasantes', {
+      headers: { Authorization: `Bearer ${authStore.token}` }
+    })
+    pasantes.value = res.data
+  } catch (err) {
+    console.error('Error cargando pasantes:', err)
+    error.value = 'No se pudieron cargar los pasantes.'
+  } finally {
+    loading.value = false
+  }
+}
+
+onMounted(() => {
+  loadData()
+})
 
 const filteredPasantes = computed(() => {
   return pasantes.value.filter(item => {
@@ -169,17 +189,52 @@ const filteredPasantes = computed(() => {
 // Lógica del Modal
 const modalAbierto = ref(false)
 const pasanteSeleccionado = ref(null)
+const motivoBaja = ref('')
+const observacionBaja = ref('')
 
 const abrirModalBaja = (pasante) => {
   pasanteSeleccionado.value = pasante
+  motivoBaja.value = ''
+  observacionBaja.value = ''
   modalAbierto.value = true
 }
 
-const confirmarBaja = () => {
-  if (pasanteSeleccionado.value) {
-    pasanteSeleccionado.value.estado = 'Abandono'
+const confirmarBaja = async () => {
+  if (!pasanteSeleccionado.value) return
+  
+  try {
+    const motivoText = motivoBaja.value === '1' ? 'Ausencia injustificada prolongada' :
+                       motivoBaja.value === '2' ? 'Incumplimiento de tareas' :
+                       motivoBaja.value === '3' ? 'Decisión del estudiante' : 'Otro';
+                       
+    await axios.post(`/api/auth/jefe/pasantes/${pasanteSeleccionado.value.id}/baja`, {
+      motivo: motivoText,
+      observacion: observacionBaja.value
+    }, {
+      headers: { Authorization: `Bearer ${authStore.token}` }
+    })
+    
+    // Recargar datos
+    await loadData()
+    modalAbierto.value = false
+    pasanteSeleccionado.value = null
+  } catch (err) {
+    console.error('Error al dar de baja:', err)
+    alert('No se pudo dar de baja al pasante.')
   }
-  modalAbierto.value = false
-  pasanteSeleccionado.value = null
+}
+
+const cambiarEstado = async (item, nuevoEstado) => {
+  try {
+    await axios.patch(`/api/auth/jefe/pasantes/${item.id}/estado`, {
+      estado: nuevoEstado
+    }, {
+      headers: { Authorization: `Bearer ${authStore.token}` }
+    })
+  } catch (err) {
+    console.error('Error al cambiar estado:', err)
+    alert('No se pudo cambiar el estado.')
+    await loadData()
+  }
 }
 </script>

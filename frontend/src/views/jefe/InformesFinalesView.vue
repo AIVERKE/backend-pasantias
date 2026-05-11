@@ -3,7 +3,7 @@
     <!-- Tabla de Informes Finales -->
     <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
       <div class="overflow-x-auto">
-        <table class="w-full text-left border-collapse min-w-[800px]">
+        <table class="w-full text-left border-collapse">
           <thead class="bg-neutral border-b border-gray-200">
             <tr>
               <th class="py-3 px-6 font-body text-xs font-semibold text-gray-500 uppercase">Estudiante</th>
@@ -30,7 +30,25 @@
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-100">
-            <tr v-for="item in filteredInformes" :key="item.id" class="hover:bg-neutral/50 transition-colors">
+            <tr v-if="loading">
+              <td colspan="6" class="py-12 text-center text-gray-500 text-sm">
+                <div class="flex items-center justify-center gap-2">
+                  <div class="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+                  Cargando informes...
+                </div>
+              </td>
+            </tr>
+            <tr v-else-if="error">
+              <td colspan="6" class="py-12 text-center text-danger text-sm">
+                {{ error }}
+              </td>
+            </tr>
+            <tr v-else-if="filteredInformes.length === 0">
+              <td colspan="6" class="py-12 text-center text-gray-500 text-sm">
+                No se encontraron informes que coincidan con los filtros.
+              </td>
+            </tr>
+            <tr v-else v-for="item in filteredInformes" :key="item.id" class="hover:bg-neutral/50 transition-colors">
               <td class="py-3 px-6">
                 <div class="flex items-center gap-3">
                   <div class="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold shrink-0">
@@ -70,15 +88,11 @@
                 </button>
                 <button 
                   v-else
+                  @click="abrirModalVer(item)"
                   class="text-[11px] font-bold text-gray-500 border border-gray-300 hover:bg-gray-50 px-3 py-1.5 rounded transition-colors w-full"
                 >
                   Ver Informe
                 </button>
-              </td>
-            </tr>
-            <tr v-if="filteredInformes.length === 0">
-              <td colspan="6" class="py-12 text-center text-gray-500 text-sm">
-                No se encontraron informes que coincidan con los filtros.
               </td>
             </tr>
           </tbody>
@@ -117,6 +131,7 @@
           <div>
             <label class="block text-xs font-semibold text-gray-500 mb-1">Apreciación Global (Conclusión)</label>
             <textarea 
+              v-model="apreciacion"
               rows="4" 
               class="w-full bg-white border border-gray-200 rounded-lg py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
               placeholder="Redacta la conclusión general sobre el desempeño del pasante durante todo el periodo..."
@@ -124,7 +139,7 @@
           </div>
           
           <div class="flex items-center gap-2 mt-2">
-            <input type="checkbox" id="confirm" class="rounded border-gray-300 text-primary focus:ring-primary">
+            <input v-model="confirmado" type="checkbox" id="confirm" class="rounded border-gray-300 text-primary focus:ring-primary">
             <label for="confirm" class="text-xs text-gray-600">Confirmo que la evaluación es definitiva y autorizo su emisión.</label>
           </div>
         </div>
@@ -139,19 +154,77 @@
         </div>
       </div>
     </div>
+
+    <!-- Modal "Ver Informe" -->
+    <div v-if="modalVerAbierto" class="fixed inset-0 z-50 flex items-center justify-center bg-secondary/50 backdrop-blur-sm p-4">
+      <div class="bg-white rounded-xl shadow-xl w-full max-w-lg overflow-hidden">
+        <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+          <h3 class="font-headline font-bold text-secondary text-lg">Informe Final Emitido</h3>
+          <button @click="modalVerAbierto = false" class="text-gray-400 hover:text-gray-600">
+            <v-icon icon="mdi-close" size="20"></v-icon>
+          </button>
+        </div>
+        <div class="p-6 space-y-4">
+          <div>
+            <span class="text-xs font-semibold text-gray-500 uppercase">Estudiante</span>
+            <p class="text-sm text-secondary font-medium">{{ informeAVer?.estudiante }}</p>
+          </div>
+          <div>
+            <span class="text-xs font-semibold text-gray-500 uppercase">Pasantía</span>
+            <p class="text-sm text-secondary font-medium">{{ informeAVer?.pasantia }}</p>
+          </div>
+          <div class="bg-blue-50 p-4 rounded-lg border border-blue-100 flex items-center justify-between">
+            <div>
+              <span class="text-xs text-blue-600 font-bold uppercase tracking-wide">Nota Final</span>
+            </div>
+            <div class="text-2xl font-headline font-bold text-blue-700">
+              {{ informeAVer?.notaFinal }} <span class="text-sm font-normal">/ 100</span>
+            </div>
+          </div>
+          <div>
+            <span class="text-xs font-semibold text-gray-500 uppercase">Apreciación Global</span>
+            <p class="text-sm text-gray-700 mt-1 whitespace-pre-wrap">{{ informeAVer?.contenido }}</p>
+          </div>
+        </div>
+        <div class="px-6 py-4 border-t border-gray-100 flex justify-end bg-gray-50">
+          <button @click="modalVerAbierto = false" class="px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-200 rounded-lg transition-colors border border-transparent">
+            Cerrar
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
+import axios from 'axios'
 
 const filters = ref({ estudiante: '', pasantia: '', estado: '' })
+const informes = ref([])
+const loading = ref(false)
+const error = ref(null)
 
-const informes = ref([
-  { id: 1, iniciales: 'CR', estudiante: 'Carlos Ramos', pasantia: 'Soporte Técnico', bitacorasEvaluadas: 12, totalBitacoras: 12, notaSugerida: 92, estado: 'Pendiente' },
-  { id: 2, iniciales: 'LB', estudiante: 'Luis Blanco', pasantia: 'Asistente de Marketing', bitacorasEvaluadas: 8, totalBitacoras: 8, notaSugerida: 88, estado: 'Emitido' },
-  { id: 3, iniciales: 'AP', estudiante: 'Andrea Pérez', pasantia: 'Desarrollador Backend', bitacorasEvaluadas: 10, totalBitacoras: 10, notaSugerida: 45, estado: 'Pendiente' },
-])
+const fetchInformes = async () => {
+  loading.value = true
+  error.value = null
+  try {
+    const token = localStorage.getItem('access_token')
+    const response = await axios.get('/api/auth/jefe/informes', {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+    informes.value = response.data
+  } catch (err) {
+    console.error('Error cargando informes:', err)
+    error.value = 'No se pudieron cargar los informes.'
+  } finally {
+    loading.value = false
+  }
+}
+
+onMounted(() => {
+  fetchInformes()
+})
 
 const filteredInformes = computed(() => {
   return informes.value.filter(item => {
@@ -162,20 +235,53 @@ const filteredInformes = computed(() => {
   })
 })
 
-// Lógica del Modal
+// Lógica del Modal Emitir
 const modalAbierto = ref(false)
 const informeSeleccionado = ref(null)
+const apreciacion = ref('')
+const confirmado = ref(false)
 
 const abrirModalEmitir = (informe) => {
   informeSeleccionado.value = informe
+  apreciacion.value = ''
+  confirmado.value = false
   modalAbierto.value = true
 }
 
-const confirmarEmision = () => {
-  if (informeSeleccionado.value) {
-    informeSeleccionado.value.estado = 'Emitido'
+const confirmarEmision = async () => {
+  if (!confirmado.value) {
+    alert('Debes confirmar que la evaluación es definitiva.')
+    return
   }
-  modalAbierto.value = false
-  informeSeleccionado.value = null
+  if (!apreciacion.value.trim()) {
+    alert('Debes redactar una apreciación global.')
+    return
+  }
+
+  try {
+    const token = localStorage.getItem('access_token')
+    await axios.post(`/api/auth/jefe/informes/${informeSeleccionado.value.id}/emitir`, {
+      apreciacion: apreciacion.value
+    }, {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+    
+    alert('Informe emitido correctamente.')
+    modalAbierto.value = false
+    informeSeleccionado.value = null
+    fetchInformes()
+  } catch (err) {
+    console.error('Error emitiendo informe:', err)
+    alert('Error al emitir el informe.')
+  }
+}
+
+// Lógica de Ver Informe
+const modalVerAbierto = ref(false)
+const informeAVer = ref(null)
+
+const abrirModalVer = (informe) => {
+  informeAVer.value = informe
+  modalVerAbierto.value = true
 }
 </script>
