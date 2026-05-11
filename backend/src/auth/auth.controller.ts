@@ -1,4 +1,4 @@
-import { Controller, Post, Get, Patch, UseGuards, Request, Body } from '@nestjs/common';
+import { Controller, Post, Get, Patch, Delete, UseGuards, Request, Body, Param } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBody, ApiBearerAuth } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { LocalAuthGuard } from './guards/local-auth.guard';
@@ -71,6 +71,34 @@ export class AuthController {
   }
 
   @UseGuards(JwtAuthGuard)
+  @Get('jefe/dashboard')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Obtener dashboard del jefe de pasantes' })
+  @ApiResponse({ status: 200, description: 'Dashboard del jefe de pasantes' })
+  @ApiResponse({ status: 401, description: 'Token inválido o ausente' })
+  @ApiResponse({ status: 403, description: 'Acceso restringido a jefes de pasantes' })
+  async getJefeDashboard(@Request() req: any) {
+    if (req.user.tipo !== 'jefe_pasantes' && req.user.tipo !== 'JEFE_PASANTES') {
+      return { message: 'Acceso restringido a jefes de pasantes' };
+    }
+    return this.authService.getJefeDashboard(req.user.userId);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('jefe/inscripciones')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Obtener inscripciones a cargo del jefe de pasantes' })
+  @ApiResponse({ status: 200, description: 'Lista de inscripciones' })
+  @ApiResponse({ status: 401, description: 'Token inválido o ausente' })
+  @ApiResponse({ status: 403, description: 'Acceso restringido a jefes de pasantes' })
+  async getJefeInscripciones(@Request() req: any) {
+    if (req.user.tipo !== 'jefe_pasantes' && req.user.tipo !== 'JEFE_PASANTES') {
+      return { message: 'Acceso restringido a jefes de pasantes' };
+    }
+    return this.authService.getJefeInscripciones(req.user.userId);
+  }
+
+  @UseGuards(JwtAuthGuard)
   @Get('gerente/empresa')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Obtener información de la empresa del gerente' })
@@ -97,6 +125,63 @@ export class AuthController {
   @ApiResponse({ status: 200, description: 'Lista de jefes de pasantes' })
   @ApiResponse({ status: 401, description: 'Token inválido o ausente' })
   async getGerenteEquipo(@Request() req: any) {
+    if (req.user.tipo !== 'gerente' && req.user.tipo !== 'GERENTE') {
+      return { message: 'Acceso restringido a gerentes' };
+    }
     return this.authService.getGerenteEquipo(req.user.userId);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('gerente/equipo/:id/pasantes')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Obtener pasantes a cargo de un jefe específico' })
+  @ApiResponse({ status: 200, description: 'Lista de pasantes' })
+  @ApiResponse({ status: 401, description: 'Token inválido o ausente' })
+  async getGerenteEquipoPasantes(@Request() req: any, @Param('id') id: string) {
+    if (req.user.tipo !== 'gerente' && req.user.tipo !== 'GERENTE') {
+      return { message: 'Acceso restringido a gerentes' };
+    }
+    return this.authService.getGerenteEquipoPasantes(+id);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('gerente/equipo/invitar')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Invitar a un nuevo jefe de pasantes' })
+  @ApiResponse({ status: 201, description: 'Jefe invitado exitosamente' })
+  @ApiResponse({ status: 401, description: 'Token inválido o ausente' })
+  async invitarJefe(@Request() req: any, @Body() body: { email: string, nombre: string, apellido: string, departamento: string, contrasena?: string }) {
+    if (req.user.tipo !== 'gerente' && req.user.tipo !== 'GERENTE') {
+      return { message: 'Acceso restringido a gerentes' };
+    }
+    return this.authService.invitarJefe(req.user.userId, body);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Patch('gerente/equipo/:id')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Actualizar un jefe de pasantes' })
+  @ApiResponse({ status: 200, description: 'Jefe actualizado exitosamente' })
+  @ApiResponse({ status: 401, description: 'Token inválido o ausente' })
+  @ApiResponse({ status: 403, description: 'Acceso prohibido' })
+  async updateGerenteEquipo(@Request() req: any, @Param('id') id: string, @Body() body: any) {
+    if (req.user.tipo !== 'gerente' && req.user.tipo !== 'GERENTE') {
+      return { message: 'Acceso restringido a gerentes' };
+    }
+    return this.authService.updateGerenteEquipo(req.user.userId, +id, body);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Delete('gerente/equipo/:id')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Eliminar un jefe de pasantes' })
+  @ApiResponse({ status: 200, description: 'Jefe eliminado exitosamente' })
+  @ApiResponse({ status: 401, description: 'Token inválido o ausente' })
+  @ApiResponse({ status: 403, description: 'Acceso prohibido' })
+  async deleteGerenteEquipo(@Request() req: any, @Param('id') id: string) {
+    if (req.user.tipo !== 'gerente' && req.user.tipo !== 'GERENTE') {
+      return { message: 'Acceso restringido a gerentes' };
+    }
+    return this.authService.deleteGerenteEquipo(req.user.userId, +id);
   }
 }

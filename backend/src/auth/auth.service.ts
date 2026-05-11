@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -10,6 +10,8 @@ import { Usuario } from '../usuarios/entities/usuario.entity';
 import { TipoUsuario } from '../usuarios/entities/usuario.entity';
 import { Inscripcion, EstadoInscripcion } from '../pasantias/entities/inscripcion.entity';
 import { Pasantia, EstadoPasantia } from '../pasantias/entities/pasantia.entity';
+import { InformeFinal } from '../documentos/entities/informe-final.entity';
+import { CreateUsuarioDto } from '../usuarios/dto/create-usuario.dto';
 
 @Injectable()
 export class AuthService {
@@ -24,6 +26,8 @@ export class AuthService {
     private readonly inscripcionRepository: Repository<Inscripcion>,
     @InjectRepository(InformacionEmpresa)
     private readonly infoEmpresaRepository: Repository<InformacionEmpresa>,
+    @InjectRepository(InformeFinal)
+    private readonly informeRepository: Repository<InformeFinal>,
   ) {}
 
   async validateUser(email: string, pass: string): Promise<any> {
@@ -133,6 +137,80 @@ export class AuthService {
     };
   }
 
+  async getJefeDashboard(jefeUserId: number) {
+    // 1. Contar pasantes activos (Inscripciones aprobadas para este jefe)
+    const pasantesActivos = await this.inscripcionRepository.count({
+      where: {
+        jefe: { id_jefe: jefeUserId },
+        estado: EstadoInscripcion.APROBADA
+      }
+    });
+
+    // 2. Contar inscripciones pendientes para este jefe
+    const inscripcionesPendientes = await this.inscripcionRepository.count({
+      where: {
+        jefe: { id_jefe: jefeUserId },
+        estado: EstadoInscripcion.PENDIENTE
+      }
+    });
+
+    // 3. Contar informes por emitir (Informes finales sin nota para este jefe)
+    const informesPorEmitir = await this.informeRepository.count({
+      where: {
+        jefe: { id_jefe: jefeUserId },
+        nota_final: IsNull()
+      }
+    });
+
+    // 4. Obtener las 5 inscripciones más recientes
+    const inscripcionesRecientes = await this.inscripcionRepository.find({
+      where: {
+        jefe: { id_jefe: jefeUserId }
+      },
+      relations: ['estudiante', 'estudiante.usuario', 'pasantia'],
+      order: { created_at: 'DESC' },
+      take: 5
+    });
+
+    // Transformar para el frontend
+    const inscripcionesList = inscripcionesRecientes.map(ins => ({
+      id: ins.id_inscripcion,
+      iniciales: ins.estudiante?.usuario ? `${ins.estudiante.usuario.nombre[0]}${ins.estudiante.usuario.apellido[0]}`.toUpperCase() : '??',
+      estudiante: ins.estudiante?.usuario ? `${ins.estudiante.usuario.nombre} ${ins.estudiante.usuario.apellido}` : 'Desconocido',
+      ci: ins.estudiante?.registro_universitario || 'S/N',
+      pasantia: ins.pasantia?.titulo || 'Sin título',
+      fecha: ins.fecha_inscripcion ? new Date(ins.fecha_inscripcion).toLocaleDateString('es-BO') : 'S/F',
+      estado: ins.estado === EstadoInscripcion.PENDIENTE ? 'Pendiente' : ins.estado === EstadoInscripcion.APROBADA ? 'Aprobada' : 'Rechazada'
+    }));
+
+    return {
+      pasantesActivos,
+      inscripcionesPendientes,
+      informesPorEmitir,
+      inscripcionesRecientes: inscripcionesList
+    };
+  }
+
+  async getJefeInscripciones(jefeUserId: number) {
+    const inscripciones = await this.inscripcionRepository.find({
+      where: {
+        jefe: { id_jefe: jefeUserId }
+      },
+      relations: ['estudiante', 'estudiante.usuario', 'pasantia'],
+      order: { created_at: 'DESC' }
+    });
+
+    return inscripciones.map(ins => ({
+      id: ins.id_inscripcion,
+      iniciales: ins.estudiante?.usuario ? `${ins.estudiante.usuario.nombre[0]}${ins.estudiante.usuario.apellido[0]}`.toUpperCase() : '??',
+      estudiante: ins.estudiante?.usuario ? `${ins.estudiante.usuario.nombre} ${ins.estudiante.usuario.apellido}` : 'Desconocido',
+      ci: ins.estudiante?.registro_universitario || 'S/N',
+      pasantia: ins.pasantia?.titulo || 'Sin título',
+      fecha: ins.fecha_inscripcion ? new Date(ins.fecha_inscripcion).toLocaleDateString('es-BO') : 'S/F',
+      estado: ins.estado === EstadoInscripcion.PENDIENTE ? 'Pendiente' : ins.estado === EstadoInscripcion.APROBADA ? 'Aprobada' : 'Rechazada'
+    }));
+  }
+
   async getGerenteEmpresa(gerenteUserId: number) {
     // 1. Obtener el perfil del gerente para saber su empresa
     const gerentePerfil = await this.usuariosService.findOne(gerenteUserId);
@@ -226,14 +304,111 @@ export class AuthService {
       .andWhere('jefe.id_empresa = :empresaId', { empresaId })
       .getMany();
 
-    // 3. Transformar para el frontend
-    return Jefes.map(jefe => ({
-      id: jefe.id_usuario,
-      nombre: `${jefe.nombre} ${jefe.apellido}`,
-      iniciales: `${jefe.nombre[0]}${jefe.apellido[0]}`.toUpperCase(),
-      area: (jefe as any).jefe_pasantes?.departamento || 'Sin área',
-      email: jefe.email,
-    }));
+    // 3. Transformar para el frontend con conteos
+    const result = [];
+    for (const jefe of Jefes) {
+      // Contar pasantes asignados
+      const pasantesAsignados = await this.inscripcionRepository.count({
+        where: {
+          jefe: { id_jefe: jefe.id_usuario },
+          estado: EstadoInscripcion.APROBADA
+        }
+      });
+
+      // Contar pasantías activas
+      const pasantiasActivas = await this.usuarioRepository.manager
+        .createQueryBuilder(Pasantia, 'p')
+        .innerJoin('p.jefe_pasantes', 'jefe_p')
+        .where('jefe_p.id_jefe = :jefeId', { jefeId: jefe.id_usuario })
+        .andWhere('p.estado = :estado', { estado: EstadoPasantia.EN_CURSO })
+        .getCount();
+
+      result.push({
+        id: jefe.id_usuario,
+        nombre: `${jefe.nombre} ${jefe.apellido}`,
+        iniciales: `${jefe.nombre[0]}${jefe.apellido[0]}`.toUpperCase(),
+        area: (jefe as any).jefe_pasantes?.departamento || 'Sin área',
+        email: jefe.email,
+        pasantiasActivas,
+        pasantesAsignados
+      });
+    }
+
+    return result;
+  }
+
+  async getGerenteEquipoPasantes(jefeId: number) {
+    const inscripciones = await this.inscripcionRepository.find({
+      where: {
+        jefe: { id_jefe: jefeId },
+        estado: EstadoInscripcion.APROBADA
+      },
+      relations: ['estudiante', 'estudiante.usuario', 'pasantia']
+    });
+
+    return inscripciones.map(ins => {
+      const inicio = ins.fecha_inicio_periodo ? new Date(ins.fecha_inicio_periodo) : null;
+      const fin = ins.fecha_fin_periodo ? new Date(ins.fecha_fin_periodo) : null;
+      let progreso = 0;
+
+      if (inicio && fin) {
+        const total = fin.getTime() - inicio.getTime();
+        const transcurrido = new Date().getTime() - inicio.getTime();
+        if (total > 0) {
+          progreso = Math.min(100, Math.max(0, Math.round((transcurrido / total) * 100)));
+        }
+      }
+
+      return {
+        id: ins.id_inscripcion,
+        estudiante: ins.estudiante?.usuario ? `${ins.estudiante.usuario.nombre} ${ins.estudiante.usuario.apellido}` : 'Desconocido',
+        pasantia: ins.pasantia?.titulo || 'Sin título',
+        progreso,
+        estado: ins.estado
+      };
+    });
+  }
+
+  async invitarJefe(gerenteUserId: number, data: { email: string, nombre: string, apellido: string, departamento: string, contrasena?: string }) {
+    const gerentePerfil = await this.usuariosService.findOne(gerenteUserId);
+    if (!gerentePerfil.gerente?.empresa) {
+      throw new NotFoundException('El gerente no tiene una empresa asignada');
+    }
+    const empresaId = gerentePerfil.gerente.empresa.id_empresa;
+
+    const createUsuarioDto: CreateUsuarioDto = {
+      email: data.email,
+      contrasena: data.contrasena || 'Temporal123*', // Usar la proporcionada o una por defecto
+      nombre: data.nombre,
+      apellido: data.apellido,
+      tipo_usuario: TipoUsuario.JEFE_PASANTES,
+      id_empresa: empresaId,
+      departamento: data.departamento,
+    };
+
+    return this.usuariosService.create(createUsuarioDto);
+  }
+
+  async updateGerenteEquipo(gerenteUserId: number, id: number, data: any) {
+    const gerentePerfil = await this.usuariosService.findOne(gerenteUserId);
+    const jefe = await this.usuariosService.findOne(id);
+
+    if (!jefe.jefe_pasantes || jefe.jefe_pasantes.empresa?.id_empresa !== gerentePerfil.gerente?.empresa?.id_empresa) {
+      throw new ForbiddenException('No tenés permiso para editar este jefe de pasantes');
+    }
+
+    return this.usuariosService.update(id, data);
+  }
+
+  async deleteGerenteEquipo(gerenteUserId: number, id: number) {
+    const gerentePerfil = await this.usuariosService.findOne(gerenteUserId);
+    const jefe = await this.usuariosService.findOne(id);
+
+    if (!jefe.jefe_pasantes || jefe.jefe_pasantes.empresa?.id_empresa !== gerentePerfil.gerente?.empresa?.id_empresa) {
+      throw new ForbiddenException('No tenés permiso para eliminar este jefe de pasantes');
+    }
+
+    return this.usuariosService.remove(id);
   }
 }
 
