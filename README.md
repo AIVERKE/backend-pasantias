@@ -1,68 +1,75 @@
-# Sistema de Pasantías - Backend
+# 🚀 Sistema de Pasantías
 
-Este proyecto es la implementación de la capa de acceso a datos y base de datos relacional para el Sistema de Pasantías, usando **NestJS**, **TypeORM** y **PostgreSQL**.
+Bienvenido al repositorio del **Sistema de Pasantías**. Este proyecto está estructurado como un monorepo que contiene tanto el backend como el frontend de la aplicación.
 
-## 📋 Requisitos Previos
+## 📁 Estructura del Proyecto
 
-- [Node.js](https://nodejs.org/en/) (v16 o superior)
-- PostgreSQL Server instalado de manera nativa y corriendo localmente.
+El proyecto está dividido en dos carpetas principales:
 
-## ⚙️ Configuración del Entorno (.env)
+- **`backend/`**: API REST construida con **NestJS**, **TypeORM** y **PostgreSQL**.
+- **`frontend/`**: Aplicación de cliente construida con **Vue 3**, **Vite** y **Tailwind CSS**.
 
-El proyecto requiere que configures tus credenciales de PostgreSQL en el archivo `.env` ubicado en esta misma carpeta:
+---
 
-```env
-DB_HOST=localhost
-DB_PORT=5432
-DB_USERNAME=pasantias_user
-DB_PASSWORD=pasantias_password
-DB_DATABASE=pasantias_db
-```
-*(Asegúrate de haber creado manualmente una base de datos llamada `pasantias_db` en tu Postgres local o PgAdmin con esas credenciales)*
+## 🛠️ Cómo correr el proyecto completo
 
-## 🚀 Instalación y Despliegue
+Para ejecutar la aplicación completa en tu entorno local, debés levantar ambos servicios (backend y frontend) en terminales separadas.
 
-1. **Instalar Dependencias**
-   Abre una terminal en esta carpeta (`pasantias-backend`) y ejecuta:
+### 1. Levantar el Backend (API)
+
+El backend maneja la lógica de negocio y la conexión con la base de datos PostgreSQL.
+
+1. Abrí una terminal y movete a la carpeta del backend:
+   ```bash
+   cd backend
+   ```
+2. Instalá las dependencias:
    ```bash
    npm install
    ```
-
-2. **Ejecutar las Migraciones a la Base de Datos**
-   El esquema inicial de la base de datos ya ha sido generado. Teniendo tu servidor PostgreSQL nativo corriendo y el archivo `.env` configurado, simplemente sincroniza las tablas aplicando las migraciones existentes con:
+3. Configurá las variables de entorno:
+   - Creá un archivo `.env` basado en el `.env.example`.
+   - Asegurate de tener una base de datos PostgreSQL creada y poné las credenciales correctas.
+4. Corré las migraciones para crear las tablas en la base de datos:
    ```bash
    npm run migration:run
    ```
-
-3. **Levantar el Servidor (Desarrollo)**
-   Arranca la aplicación escuchando por los cambios en vivo:
+5. Iniciá el servidor en modo desarrollo:
    ```bash
    npm run start:dev
    ```
+   *El backend correrá por defecto en `http://localhost:3000` (o el puerto que tengas configurado).*
 
-## 🛠️ Comandos configurados de TypeORM
+> [!IMPORTANT]
+> Asegurate de que tu servidor PostgreSQL esté corriendo antes de ejecutar las migraciones o iniciar el servidor.
 
-Se han añadido los siguientes *scripts* en el `package.json` para facilitar la gestión de la base de datos usando TypeORM.
+---
 
-* **Aplicar migraciones pendientes** (sincroniza las entidades y cambios a la BD):
-  ```bash
-  npm run migration:run
-  ```
-* **Generar una nueva migración** (luego de editar/crear una entidad). Sustituye `NombreMigracion` por un término descriptivo:
-  ```bash
-  npm run migration:generate -- src/migrations/NombreMigracion
-  ```
-* **Revertir la última migración aplicada** en caso de que sea necesario deshacerla de la BD:
-  ```bash
-  npm run migration:revert
-  ```
-* **Uso libre de la CLI de TypeORM** (con la conexión `data-source` inyectada):
-  ```bash
-  npm run typeorm -- [comando]
-  ```
+### 2. Levantar el Frontend (Cliente)
 
-## 🏗️ Estructura de Entidades Creada
-- **Módulo Usuarios:** Implementada relación de herencia Uno-a-Uno (la PK e.g. `id_estudiante` es la misma que la del Parent `id_usuario`). Entidades: `Usuario`, `Estudiante`, `Tutor`, `Gerente`, `JefePasantes`, `SuperUsuario`.
-- **Módulo Empresas:** `Empresa`
-- **Módulo Pasantias:** `Pasantia`, `Actividad`, `Inscripcion`, `Comentario`.
-- **Módulo Documentos:** `Bitacora`, `InformeFinal`, `HojaVida`, `Habilidad`.
+El frontend es la interfaz de usuario interactiva.
+
+1. Abrí **otra** terminal y movete a la carpeta del frontend:
+   ```bash
+   cd frontend
+   ```
+2. Instalá las dependencias:
+   ```bash
+   npm install
+   ```
+3. Configurá las variables de entorno:
+   - Creá un archivo `.env` basado en el `.env.example`.
+   - Por defecto, `VITE_API_URL` apunta a `/api` o a la URL de tu backend.
+4. Iniciá el servidor de desarrollo de Vite:
+   ```bash
+   npm run dev
+   ```
+   *El frontend correrá por defecto en `http://localhost:5173`.*
+
+---
+
+## 📖 Documentación Detallada
+
+Si necesitás más detalles sobre comandos específicos, base de datos o estructura interna, revisá los READMEs específicos de cada carpeta:
+- [README del Backend](file:///c:/Users/lenovo/Documents/Proyectos/266-Taller%20de%20t%C3%A9cnico%20Superior/Pasantias/backend/README.md)
+- [README del Frontend](file:///c:/Users/lenovo/Documents/Proyectos/266-Taller%20de%20t%C3%A9cnico%20Superior/Pasantias/frontend/README.md)
