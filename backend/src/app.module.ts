@@ -14,6 +14,9 @@ import { InscripcionesModule } from './inscripciones/inscripciones.module';
 import { ActividadesModule } from './actividades/actividades.module';
 import { ComentariosModule } from './comentarios/comentarios.module';
 import { DocumentosModule } from './documentos/documentos.module';
+import { InformesModule } from './informes/informes.module';
+import { DashboardModule } from './dashboard/dashboard.module';
+import { NotificacionesModule } from './notificaciones/notificaciones.module';
 
 @Module({
   imports: [
@@ -29,6 +32,9 @@ import { DocumentosModule } from './documentos/documentos.module';
     ActividadesModule,
     ComentariosModule,
     DocumentosModule,
+    InformesModule,
+    DashboardModule,
+    NotificacionesModule,
   ],
   controllers: [AppController],
   providers: [AppService],

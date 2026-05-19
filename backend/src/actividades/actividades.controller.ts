@@ -5,6 +5,7 @@ import { CreateActividadDto } from './dto/create-actividad.dto';
 import { UpdateActividadDto } from './dto/update-actividad.dto';
 import { CreateTareaDto } from './dto/create-tarea.dto';
 import { UpdateTareaDto } from './dto/update-tarea.dto';
+import { CreateComentarioActividadDto } from './dto/create-comentario-actividad.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
 @ApiTags('Actividades')
@@ -65,6 +66,30 @@ export class ActividadesController {
   @ApiResponse({ status: 200, description: 'Tarea actualizada' })
   updateTarea(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateTareaDto) {
     return this.actividadesService.updateTarea(id, dto);
+  }
+
+  @Get('estudiante/:id')
+  @ApiOperation({ summary: 'Listar actividades de un estudiante con nota promedio' })
+  @ApiParam({ name: 'id', description: 'ID del estudiante' })
+  @ApiResponse({ status: 200, description: 'Actividades y promedio' })
+  findTareasByEstudiante(@Param('id', ParseIntPipe) id: number) {
+    return this.actividadesService.findTareasByEstudiante(id);
+  }
+
+  @Get(':id/comentarios')
+  @ApiOperation({ summary: 'Listar comentarios de una actividad/tarea' })
+  @ApiParam({ name: 'id', description: 'ID de la actividad/tarea' })
+  @ApiResponse({ status: 200, description: 'Historial de comentarios' })
+  findComentariosByTarea(@Param('id', ParseIntPipe) id: number) {
+    return this.actividadesService.findComentariosByTarea(id);
+  }
+
+  @Post(':id/comentarios')
+  @ApiOperation({ summary: 'Agregar un comentario a una actividad/tarea' })
+  @ApiParam({ name: 'id', description: 'ID de la actividad/tarea' })
+  @ApiResponse({ status: 201, description: 'Comentario creado' })
+  createComentario(@Param('id', ParseIntPipe) id: number, @Body() dto: CreateComentarioActividadDto) {
+    return this.actividadesService.createComentario(id, dto);
   }
 }
 

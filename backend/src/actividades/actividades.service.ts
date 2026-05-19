@@ -3,13 +3,15 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Actividad, EstadoActividad } from '../pasantias/entities/actividad.entity';
 import { Pasantia } from '../pasantias/entities/pasantia.entity';
-import { Tarea, EstadoTarea } from '../pasantias/entities/tarea.entity';
+import { Tarea, EstadoTarea, EstadoSemaforo } from '../pasantias/entities/tarea.entity';
 import { Inscripcion } from '../pasantias/entities/inscripcion.entity';
 import { JefePasantes } from '../usuarios/entities/jefe-pasantes.entity';
+import { ComentarioActividad } from './entities/comentario-actividad.entity';
 import { CreateActividadDto } from './dto/create-actividad.dto';
 import { UpdateActividadDto } from './dto/update-actividad.dto';
 import { CreateTareaDto } from './dto/create-tarea.dto';
 import { UpdateTareaDto } from './dto/update-tarea.dto';
+import { CreateComentarioActividadDto } from './dto/create-comentario-actividad.dto';
 
 @Injectable()
 export class ActividadesService {
@@ -24,6 +26,8 @@ export class ActividadesService {
     private readonly inscripcionRepository: Repository<Inscripcion>,
     @InjectRepository(JefePasantes)
     private readonly jefeRepository: Repository<JefePasantes>,
+    @InjectRepository(ComentarioActividad)
+    private readonly comentarioRepository: Repository<ComentarioActividad>,
   ) {}
 
   findByPasantia(pasantiaId: number): Promise<Actividad[]> {
@@ -74,10 +78,10 @@ export class ActividadesService {
     }
 
     const tarea = this.tareaRepository.create({
-      titulo: dto.titulo,
-      descripcion: dto.descripcion,
-      fecha_limite: new Date(dto.fecha_limite),
-      estado: EstadoTarea.ACTIVO,
+      titulo_actividad: dto.titulo,
+      descripcion_actividad: dto.descripcion,
+      fecha_asignacion: new Date(dto.fecha_limite),
+      estado_semaforo: EstadoSemaforo.PENDIENTE,
       jefe,
       inscripcion: inscripcion || undefined,
     });
@@ -89,12 +93,65 @@ export class ActividadesService {
     const tarea = await this.tareaRepository.findOne({ where: { id_tarea: id } });
     if (!tarea) throw new NotFoundException(`Tarea con ID ${id} no encontrada`);
 
-    if (dto.titulo !== undefined) tarea.titulo = dto.titulo;
-    if (dto.descripcion !== undefined) tarea.descripcion = dto.descripcion;
-    if (dto.fecha_limite !== undefined) tarea.fecha_limite = new Date(dto.fecha_limite);
-    if (dto.estado !== undefined) tarea.estado = dto.estado;
+    if (dto.titulo !== undefined) tarea.titulo_actividad = dto.titulo;
+    if (dto.descripcion !== undefined) tarea.descripcion_actividad = dto.descripcion;
+    if (dto.fecha_limite !== undefined) tarea.fecha_asignacion = new Date(dto.fecha_limite);
+    if (dto.estado !== undefined) {
+      if (dto.estado === 'Activo') tarea.estado_semaforo = EstadoSemaforo.EN_CURSO;
+      if (dto.estado === 'Completado') tarea.estado_semaforo = EstadoSemaforo.COMPLETADA;
+    }
 
     return this.tareaRepository.save(tarea);
+  }
+
+  async findTareasByEstudiante(estudianteId: number) {
+    const tareas = await this.tareaRepository.find({
+      where: {
+        inscripcion: {
+          estudiante: {
+            id_estudiante: estudianteId
+          }
+        }
+      },
+      order: {
+        fecha_asignacion: 'DESC'
+      },
+      relations: ['jefe', 'jefe.usuario', 'inscripcion']
+    });
+
+    const gradedTareas = tareas.filter(t => t.nota_actividad !== null && t.nota_actividad !== undefined);
+    const promedio = gradedTareas.length > 0
+      ? Math.round(gradedTareas.reduce((sum, t) => sum + t.nota_actividad, 0) / gradedTareas.length)
+      : null;
+
+    return {
+      promedio,
+      actividades: tareas
+    };
+  }
+
+  async findComentariosByTarea(tareaId: number): Promise<ComentarioActividad[]> {
+    const tarea = await this.tareaRepository.findOne({ where: { id_tarea: tareaId } });
+    if (!tarea) throw new NotFoundException(`Tarea con ID ${tareaId} no encontrada`);
+
+    return this.comentarioRepository.find({
+      where: { tarea: { id_tarea: tareaId } },
+      order: { fecha: 'ASC' }
+    });
+  }
+
+  async createComentario(tareaId: number, dto: CreateComentarioActividadDto): Promise<ComentarioActividad> {
+    const tarea = await this.tareaRepository.findOne({ where: { id_tarea: tareaId } });
+    if (!tarea) throw new NotFoundException(`Tarea con ID ${tareaId} no encontrada`);
+
+    const comentario = this.comentarioRepository.create({
+      texto: dto.texto,
+      rol: dto.rol,
+      autor: dto.autor,
+      tarea
+    });
+
+    return this.comentarioRepository.save(comentario);
   }
 }
 
