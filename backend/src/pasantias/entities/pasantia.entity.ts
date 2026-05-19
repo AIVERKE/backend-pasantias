@@ -37,6 +37,12 @@ export class Pasantia {
   @Column({ type: 'varchar', length: 100, nullable: true })
   area: string;
 
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  horario_laboral: string;
+
+  @Column({ type: 'int', default: 1 })
+  cupos_totales: number;
+
   @ManyToMany(() => JefePasantes)
   @JoinTable({
     name: 'pasantia_jefe_pasantes',

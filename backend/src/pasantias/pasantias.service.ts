@@ -23,22 +23,35 @@ export class PasantiasService {
     private readonly jefePasantesRepository: Repository<JefePasantes>,
   ) {}
 
-  findAll(estado?: EstadoPasantia, empresaId?: number): Promise<Pasantia[]> {
-    const where: any = {};
-    if (estado) where.estado = estado;
-    if (empresaId) where.empresa = { id_empresa: empresaId };
-    return this.pasantiaRepository.find({
-      where,
-      relations: ['empresa'],
-      order: { created_at: 'DESC' },
-    });
+  async findAll(estado?: EstadoPasantia, empresaId?: number): Promise<Pasantia[]> {
+    const qb = this.pasantiaRepository.createQueryBuilder('pasantia')
+      .leftJoinAndSelect('pasantia.empresa', 'empresa')
+      .loadRelationCountAndMap(
+        'pasantia.cupos_ocupados',
+        'pasantia.inscripciones',
+        'inscripcion',
+        (qb) => qb.where("inscripcion.estado = 'aprobada' OR inscripcion.estado = 'completada'")
+      )
+      .orderBy('pasantia.created_at', 'DESC');
+
+    if (estado) qb.andWhere('pasantia.estado = :estado', { estado });
+    if (empresaId) qb.andWhere('empresa.id_empresa = :empresaId', { empresaId });
+
+    return qb.getMany();
   }
 
   async findOne(id: number): Promise<Pasantia> {
-    const pasantia = await this.pasantiaRepository.findOne({
-      where: { id_pasantia: id },
-      relations: ['empresa'],
-    });
+    const pasantia = await this.pasantiaRepository.createQueryBuilder('pasantia')
+      .leftJoinAndSelect('pasantia.empresa', 'empresa')
+      .loadRelationCountAndMap(
+        'pasantia.cupos_ocupados',
+        'pasantia.inscripciones',
+        'inscripcion',
+        (qb) => qb.where("inscripcion.estado = 'aprobada' OR inscripcion.estado = 'completada'")
+      )
+      .where('pasantia.id_pasantia = :id', { id })
+      .getOne();
+
     if (!pasantia) throw new NotFoundException(`Pasantía con ID ${id} no encontrada`);
     return pasantia;
   }

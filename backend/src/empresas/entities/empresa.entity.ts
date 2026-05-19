@@ -18,6 +18,12 @@ export class Empresa {
   @Column({ type: 'varchar', length: 20 })
   telefono: string;
 
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  url_logo: string;
+
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  url_portada: string;
+
   @OneToMany(() => Pasantia, (pasantia) => pasantia.empresa)
   pasantias: Pasantia[];
 

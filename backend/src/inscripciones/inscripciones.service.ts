@@ -32,6 +32,24 @@ export class InscripcionesService {
     });
   }
 
+  async findByEstudiante(estudianteId: number): Promise<any[]> {
+    const inscripciones = await this.inscripcionRepository.find({
+      where: { estudiante: { id_estudiante: estudianteId } },
+      relations: ['pasantia', 'pasantia.empresa', 'pasantia.inscripciones'],
+    });
+
+    return inscripciones.map(i => {
+      if (i.pasantia) {
+        const approvedCount = i.pasantia.inscripciones
+          ? i.pasantia.inscripciones.filter(ins => ins.estado === EstadoInscripcion.APROBADA || ins.estado === EstadoInscripcion.COMPLETADA).length
+          : 0;
+        (i.pasantia as any).cupos_ocupados = approvedCount;
+        delete (i.pasantia as any).inscripciones;
+      }
+      return i;
+    });
+  }
+
   async create(dto: CreateInscripcionDto): Promise<Inscripcion> {
     const estudiante = await this.estudianteRepository.findOne({ where: { id_estudiante: dto.id_estudiante } });
     if (!estudiante) throw new NotFoundException(`Estudiante con ID ${dto.id_estudiante} no encontrado`);
@@ -67,5 +85,15 @@ export class InscripcionesService {
     inscripcion.tutor = tutor;
     inscripcion.jefe = jefe;
     return this.inscripcionRepository.save(inscripcion);
+  }
+
+  async cancelar(id: number): Promise<void> {
+    const inscripcion = await this.inscripcionRepository.findOne({ where: { id_inscripcion: id } });
+    if (!inscripcion) throw new NotFoundException(`Inscripción con ID ${id} no encontrada`);
+    if (inscripcion.estado !== EstadoInscripcion.PENDIENTE) {
+      const { BadRequestException } = require('@nestjs/common');
+      throw new BadRequestException('Solo se pueden cancelar postulaciones pendientes');
+    }
+    await this.inscripcionRepository.softDelete(id);
   }
 }

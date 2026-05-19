@@ -19,6 +19,27 @@ export class InformeFinal {
   @Column({ type: 'text', nullable: true })
   observaciones: string;
 
+  @Column({ type: 'int', default: 0 })
+  crit_conocimiento_tecnico: number;
+
+  @Column({ type: 'int', default: 0 })
+  crit_responsabilidad: number;
+
+  @Column({ type: 'int', default: 0 })
+  crit_trabajo_equipo: number;
+
+  @Column({ type: 'int', default: 0 })
+  crit_iniciativa: number;
+
+  @Column({ type: 'text', nullable: true })
+  evaluacion_cualitativa: string;
+
+  @Column({ type: 'text', nullable: true })
+  comentario_estudiante: string;
+
+  @Column({ type: 'int', nullable: true })
+  valoracion_estrellas: number;
+
   @ManyToOne(() => Inscripcion)
   @JoinColumn({ name: 'id_inscripcion' })
   inscripcion: Inscripcion;

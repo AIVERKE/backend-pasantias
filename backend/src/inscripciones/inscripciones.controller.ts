@@ -18,6 +18,14 @@ export class InscripcionesController {
     return this.inscripcionesService.findByPasantia(id);
   }
 
+  @Get('estudiante/:id')
+  @ApiOperation({ summary: 'Listar inscripciones de un estudiante' })
+  @ApiParam({ name: 'id', description: 'ID del estudiante' })
+  @ApiResponse({ status: 200, description: 'Lista de inscripciones' })
+  findByEstudiante(@Param('id', ParseIntPipe) id: number) {
+    return this.inscripcionesService.findByEstudiante(id);
+  }
+
   @Post()
   @ApiOperation({ summary: 'Aplicar a una pasantía (crear inscripción)' })
   @ApiResponse({ status: 201, description: 'Inscripción creada en estado PENDIENTE' })
@@ -42,5 +50,14 @@ export class InscripcionesController {
   @ApiResponse({ status: 404, description: 'Inscripción, tutor o jefe no encontrado' })
   asignarSupervisores(@Param('id', ParseIntPipe) id: number, @Body() dto: AsignarSupervisoresDto) {
     return this.inscripcionesService.asignarSupervisores(id, dto);
+  }
+
+  @Patch(':id/cancelar')
+  @ApiOperation({ summary: 'Cancelar una postulación por el estudiante' })
+  @ApiParam({ name: 'id', description: 'ID de la inscripción' })
+  @ApiResponse({ status: 200, description: 'Postulación cancelada' })
+  @ApiResponse({ status: 400, description: 'Solo se pueden cancelar postulaciones pendientes' })
+  cancelar(@Param('id', ParseIntPipe) id: number) {
+    return this.inscripcionesService.cancelar(id);
   }
 }

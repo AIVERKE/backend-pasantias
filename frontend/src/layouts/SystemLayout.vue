@@ -79,16 +79,62 @@
             <span class="text-secondary font-medium">{{ currentRouteName }}</span>
           </div>
         </div>
-        <div class="w-64">
-          <!-- Búsqueda Global -->
-          <div class="relative">
-            <v-icon icon="mdi-magnify" size="18" class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></v-icon>
-            <input 
-              type="text" 
-              placeholder="Buscar..." 
-              class="w-full bg-neutral text-sm rounded-md py-1.5 pl-9 pr-3 focus:outline-none focus:ring-1 focus:ring-primary border border-transparent focus:border-primary"
-            />
+        <div class="flex items-center gap-6">
+          <div class="w-64 hidden sm:block">
+            <!-- Búsqueda Global -->
+            <div class="relative">
+              <v-icon icon="mdi-magnify" size="18" class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></v-icon>
+              <input 
+                type="text" 
+                placeholder="Buscar..." 
+                class="w-full bg-neutral text-sm rounded-md py-1.5 pl-9 pr-3 focus:outline-none focus:ring-1 focus:ring-primary border border-transparent focus:border-primary"
+              />
+            </div>
           </div>
+          
+          <!-- Notificaciones (Campana) -->
+          <button id="notif-btn" class="relative text-gray-500 hover:text-primary transition-colors focus:outline-none">
+            <v-badge
+              :content="unreadNotifications"
+              color="error"
+              :model-value="unreadNotifications > 0"
+            >
+              <v-icon icon="mdi-bell-outline" size="24"></v-icon>
+            </v-badge>
+
+            <v-menu activator="parent" location="bottom end" transition="slide-y-transition">
+              <v-list class="py-0 rounded-xl elevation-3 border border-gray-100 mt-2 overflow-hidden" max-width="320">
+                <div class="px-4 py-3 bg-gray-50 border-b border-gray-100">
+                  <span class="text-sm font-bold text-secondary">Notificaciones</span>
+                </div>
+                
+                <div class="max-h-[350px] overflow-y-auto">
+                  <div v-if="notificacionesPrueba.length === 0" class="py-6 text-center text-sm text-gray-500 font-medium">
+                    No tienes notificaciones
+                  </div>
+                  <v-list-item 
+                    v-for="(notif, idx) in notificacionesPrueba" 
+                    :key="idx" 
+                    link 
+                    class="border-b border-gray-50 hover:bg-blue-50/50 py-3"
+                    @click="manejarClickNotificacion(idx)"
+                  >
+                    <template v-slot:prepend>
+                      <div class="w-8 h-8 rounded-full bg-blue-50 text-primary flex items-center justify-center mr-3 border border-blue-100">
+                        <v-icon :icon="notif.icon" size="small"></v-icon>
+                      </div>
+                    </template>
+                    <v-list-item-title class="text-[13px] font-bold text-gray-700 mb-0.5" style="white-space: normal;">
+                      {{ notif.titulo }}
+                    </v-list-item-title>
+                    <v-list-item-subtitle class="text-[11px] text-gray-500" style="white-space: normal;">
+                      {{ notif.texto }}
+                    </v-list-item-subtitle>
+                  </v-list-item>
+                </div>
+              </v-list>
+            </v-menu>
+          </button>
         </div>
       </header>
 
@@ -108,7 +154,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import axios from 'axios'
 import { useAuthStore } from '@/stores/auth'
@@ -118,6 +164,42 @@ const router = useRouter()
 const authStore = useAuthStore()
 
 const isSidebarOpen = ref(false)
+const unreadNotifications = ref(0)
+let notifInterval = null
+
+// Datos de prueba solicitados para el diseño del menú
+const notificacionesPrueba = ref([
+  { icon: 'mdi-message-text-outline', titulo: 'Mensaje nuevo', texto: 'Respuesta del Jefe de Pasantes en Actividad X', tiempo: 'Hace 5 min' },
+  { icon: 'mdi-message-text-outline', titulo: 'Mensaje nuevo', texto: 'Consulta del Tutor Académico', tiempo: 'Hace 1 hora' },
+  { icon: 'mdi-message-text-outline', titulo: 'Mensaje nuevo', texto: 'Corrección enviada', tiempo: 'Ayer' },
+  { icon: 'mdi-pin-outline', titulo: 'Actividad asignada', texto: 'Nueva tarea inyectada en la Bitácora', tiempo: 'Ayer' },
+])
+
+const fetchNotifications = async () => {
+  // Mock logic para la UI: se basa en nuestro array de prueba en lugar del backend temporalmente
+  unreadNotifications.value = notificacionesPrueba.value.length
+}
+
+const manejarClickNotificacion = (idx) => {
+  // 1. Borrar la notificación del array
+  notificacionesPrueba.value.splice(idx, 1)
+  
+  // 2. Actualizar el contador de la campana
+  unreadNotifications.value = notificacionesPrueba.value.length
+
+  // 3. Navegar a la bitácora
+  if (authStore.user?.tipo === 'estudiante') {
+    router.push('/estudiante/bitacora')
+  }
+}
+
+onMounted(() => {
+  fetchNotifications()
+})
+
+onUnmounted(() => {
+  if (notifInterval) clearInterval(notifInterval)
+})
 
 // Cerrar sidebar al cambiar de ruta
 watch(() => route.path, () => {

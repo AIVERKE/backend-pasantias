@@ -12,7 +12,7 @@ import { Inscripcion, EstadoInscripcion } from '../../pasantias/entities/inscrip
 import { Actividad, EstadoActividad } from '../../pasantias/entities/actividad.entity';
 import { Bitacora } from '../../documentos/entities/bitacora.entity';
 import { InformeFinal } from '../../documentos/entities/informe-final.entity';
-import { Tarea, EstadoTarea } from '../../pasantias/entities/tarea.entity';
+import { Tarea, EstadoTarea, EstadoSemaforo } from '../../pasantias/entities/tarea.entity';
 
 export default class FullSeeder implements Seeder {
   async run(
@@ -411,10 +411,10 @@ export default class FullSeeder implements Seeder {
     if (inscripcionActiva && roberto) {
       await tareaRepo.save(
         tareaRepo.create({
-          titulo: 'Crear DTOs de validación',
-          descripcion: 'Crear los DTOs necesarios para el módulo de usuarios usando class-validator.',
-          fecha_limite: new Date('2026-05-20'),
-          estado: EstadoTarea.ACTIVO,
+          titulo_actividad: 'Crear DTOs de validación',
+          descripcion_actividad: 'Crear los DTOs necesarios para el módulo de usuarios usando class-validator.',
+          fecha_asignacion: new Date('2026-05-20'),
+          estado_semaforo: EstadoSemaforo.PENDIENTE,
           jefe: roberto || undefined,
           inscripcion: inscripcionActiva,
         }),
@@ -422,10 +422,10 @@ export default class FullSeeder implements Seeder {
 
       await tareaRepo.save(
         tareaRepo.create({
-          titulo: 'Configurar entorno de desarrollo',
-          descripcion: 'Clonar el repositorio y levantar los contenedores de Docker.',
-          fecha_limite: new Date('2026-05-01'),
-          estado: EstadoTarea.COMPLETADO,
+          titulo_actividad: 'Configurar entorno de desarrollo',
+          descripcion_actividad: 'Clonar el repositorio y levantar los contenedores de Docker.',
+          fecha_asignacion: new Date('2026-05-01'),
+          estado_semaforo: EstadoSemaforo.COMPLETADA,
           jefe: roberto || undefined,
           inscripcion: inscripcionActiva,
         }),

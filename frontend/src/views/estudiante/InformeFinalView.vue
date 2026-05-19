@@ -1,9 +1,27 @@
 <template>
-  <div class="h-full flex flex-col md:flex-row gap-6 relative">
-    
-    <!-- Columna Izquierda: Lista de Pasantías Realizadas -->
-    <div class="w-full md:w-1/3 flex flex-col gap-4">
-      <h2 class="text-lg font-headline font-bold text-secondary mb-2">Historial de Pasantías</h2>
+  <div class="h-full">
+    <!-- Estado: Cargando -->
+    <div v-if="cargando" class="flex flex-col items-center justify-center h-full p-12 text-center text-primary">
+      <v-icon icon="mdi-loading" size="64" class="animate-spin mb-4"></v-icon>
+      <h2 class="text-2xl font-headline font-bold mb-2">Cargando Historial...</h2>
+      <p class="text-gray-500 max-w-md">Obteniendo tus registros de pasantías e informes finales desde el sistema.</p>
+    </div>
+
+    <!-- Estado: Vacío -->
+    <div v-else-if="pasantias.length === 0" class="flex flex-col items-center justify-center h-full p-12 text-center">
+      <div class="w-24 h-24 bg-blue-50 text-primary rounded-full flex items-center justify-center mb-6 shadow-sm">
+        <v-icon icon="mdi-file-document-outline" size="48"></v-icon>
+      </div>
+      <h2 class="text-2xl font-headline font-bold text-secondary mb-2">Aún no tienes pasantías registradas</h2>
+      <p class="text-gray-500 max-w-md">Una vez que te inscribas en una pasantía y la empresa emita tu evaluación, aparecerá aquí tu informe final detallado.</p>
+    </div>
+
+    <!-- Contenido Principal -->
+    <div v-else class="h-full flex flex-col md:flex-row gap-6 relative">
+      
+      <!-- Columna Izquierda: Lista de Pasantías Realizadas -->
+      <div class="w-full md:w-1/3 flex flex-col gap-4">
+        <h2 class="text-lg font-headline font-bold text-secondary mb-2">Historial de Pasantías</h2>
       
       <div 
         v-for="pasantia in pasantias" 
@@ -54,11 +72,11 @@
     <!-- Columna Derecha: Detalle del Informe -->
     <div class="w-full md:w-2/3 bg-white rounded-xl shadow-sm border border-gray-100 flex flex-col h-full overflow-hidden" v-if="informeSeleccionado">
       
-      <!-- ESTADO: EN CURSO -->
-      <div v-if="informeSeleccionado.estado === 'En Curso'" class="flex flex-col items-center justify-center h-full p-12 text-center">
-        <v-icon icon="mdi-account-hard-hat" size="64" class="text-tertiary mb-4"></v-icon>
-        <h2 class="text-2xl font-headline font-bold text-secondary mb-2">Pasantía en progreso</h2>
-        <p class="text-gray-500 max-w-md">El informe final estará disponible aquí una vez que tu Jefe de Pasantes concluya el periodo de evaluación y emita la calificación definitiva.</p>
+      <!-- ESTADO: EN CURSO O EVALUACIÓN INEXISTENTE -->
+      <div v-if="informeSeleccionado.estado === 'En Curso' || !informeSeleccionado.nota" class="flex flex-col items-center justify-center h-full p-12 text-center">
+        <v-icon icon="mdi-lock-outline" size="64" class="text-gray-400 mb-4"></v-icon>
+        <h2 class="text-2xl font-headline font-bold text-gray-700 mb-2">El jefe de pasantes no ha liberado tu evaluación final</h2>
+        <p class="text-gray-500 max-w-md">El informe final estará disponible aquí una vez que concluya el periodo de evaluación y se emita la calificación definitiva.</p>
       </div>
 
       <!-- ESTADO: ABANDONADA -->
@@ -79,11 +97,22 @@
             <h2 class="text-2xl font-headline font-bold text-secondary">Informe Final de Desempeño</h2>
             <p class="text-sm text-gray-500 mt-1">Emitido por {{ informeSeleccionado.evaluador }} (Jefe de Pasantes)</p>
           </div>
-          
-          <button class="flex items-center gap-2 px-4 py-2 bg-neutral text-secondary font-bold text-sm rounded-lg hover:bg-gray-200 transition-colors border border-gray-200">
-            <v-icon icon="mdi-download" size="18"></v-icon>
-            Descargar PDF
-          </button>
+          <v-btn
+            v-if="informeSeleccionado.nota >= 51"
+            color="primary"
+            variant="flat"
+            size="small"
+            class="text-none font-bold tracking-normal h-10 px-4"
+            prepend-icon="mdi-download"
+            :loading="loadingCertificado[informeSeleccionado.id]"
+            @click="descargarCertificado(informeSeleccionado.id)"
+          >
+            Descargar Certificado Final
+          </v-btn>
+          <div v-else class="px-4 py-2 bg-red-50 text-danger border border-red-200 rounded-lg text-sm font-bold flex items-center gap-2">
+            <v-icon icon="mdi-alert-circle-outline" size="18"></v-icon>
+            Insuficiente
+          </div>
         </div>
 
         <!-- Contenido del Informe -->
@@ -216,89 +245,76 @@
       </div>
     </div>
 
+    </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, reactive } from 'vue'
+import { ref, computed, reactive, onMounted } from 'vue'
+import axios from 'axios'
+import Swal from 'sweetalert2'
 
-const pasantiaActiva = ref(1)
+import { useAuthStore } from '@/stores/auth'
 
-const pasantias = ref([
-  {
-    id: 1,
-    estado: 'Finalizada',
-    empresa: 'TechCorp Bolivia',
-    cargo: 'Desarrollador Frontend Vue.js',
-    periodo: 'Julio 2025 - Diciembre 2025',
-    nota: 92,
-    promedioActividades: 90,
-    evaluador: 'Ing. Carlos Mendoza',
-    comentarios: 'El estudiante demostró excelentes habilidades técnicas y una gran capacidad de aprendizaje rápido.\n\nSe adaptó perfectamente a nuestro flujo de trabajo ágil y logró completar todas las tareas asignadas en los tiempos estimados. Además, propuso mejoras significativas en la interfaz de usuario del proyecto principal.\n\nRecomendamos ampliamente al estudiante para futuras posiciones en el área de desarrollo.',
-    criterios: [
-      { nombre: 'Conocimiento Técnico', puntaje: 95 },
-      { nombre: 'Responsabilidad', puntaje: 100 },
-      { nombre: 'Trabajo en Equipo', puntaje: 85 },
-      { nombre: 'Iniciativa', puntaje: 90 }
-    ],
-    resenaEstudiante: null // Para probar cuando no hay reseña aún
-  },
-  {
-    id: 2,
-    estado: 'En Curso',
-    empresa: 'Jalasoft',
-    cargo: 'Pasante de Seguridad Informática',
-    periodo: 'Enero 2026 - Presente',
-    nota: null,
-    promedioActividades: null,
-    evaluador: null,
-    comentarios: null,
-    criterios: [],
-    resenaEstudiante: null
-  },
-  {
-    id: 3,
-    estado: 'Abandonada',
-    empresa: 'Innovación IT Labs',
-    cargo: 'Pasante de QA Automation',
-    periodo: 'Enero 2024 - Febrero 2024',
-    nota: null,
-    promedioActividades: null,
-    evaluador: null,
-    comentarios: null,
-    criterios: [],
-    resenaEstudiante: null
-  },
-  {
-    id: 4,
-    estado: 'Finalizada',
-    empresa: 'Banco Bisa',
-    cargo: 'Analista de Base de Datos',
-    periodo: 'Julio 2024 - Diciembre 2024',
-    nota: 88,
-    promedioActividades: 85,
-    evaluador: 'Lic. Mariana Ríos',
-    comentarios: 'Buen desempeño general en la optimización de consultas en nuestra base de datos Oracle.',
-    criterios: [
-      { nombre: 'Conocimiento Técnico', puntaje: 85 },
-      { nombre: 'Responsabilidad', puntaje: 90 },
-      { nombre: 'Trabajo en Equipo', puntaje: 85 },
-      { nombre: 'Iniciativa', puntaje: 95 }
-    ],
-    // Ejemplo de una reseña ya existente
-    resenaEstudiante: {
-      estrellas: 4,
-      comentario: 'Fue una buena experiencia, aprendí mucho sobre bases de datos corporativas gigantes. El tutor a veces estaba muy ocupado, pero en general recomiendo mucho el lugar para aprender.'
+const authStore = useAuthStore()
+const idEstudiante = computed(() => authStore.user?.id || 1) // Id simulado del estudiante en sesión
+const pasantiaActiva = ref(null)
+const pasantias = ref([])
+const cargando = ref(true)
+
+const fetchHistorial = async () => {
+  try {
+    cargando.value = true
+    const { data } = await axios.get(`/informes/estudiante/${idEstudiante.value}`)
+    pasantias.value = data
+    if (data.length > 0 && !pasantiaActiva.value) {
+      pasantiaActiva.value = data[0].id
     }
+  } catch (error) {
+    console.error('Error cargando historial de informes:', error)
+    Swal.fire('Error', 'No se pudo cargar el historial de pasantías.', 'error')
+  } finally {
+    cargando.value = false
   }
-])
+}
+
+onMounted(() => {
+  fetchHistorial()
+})
 
 const informeSeleccionado = computed(() => {
   return pasantias.value.find(p => p.id === pasantiaActiva.value)
 })
 
+// Módulo de Reportes PDF
+const loadingCertificado = ref({})
+const descargarCertificado = async (id) => {
+  loadingCertificado.value[id] = true
+  try {
+    const response = await axios.get(`/informes/${id}/descargar-pdf`, {
+      responseType: 'blob', // Importante para recibir binarios
+    })
+    
+    // Crear enlace temporal para forzar descarga
+    const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }))
+    const link = document.createElement('a')
+    link.href = url
+    link.setAttribute('download', `informe_final_${id}.pdf`)
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    window.URL.revokeObjectURL(url)
+  } catch (error) {
+    console.error('Error al descargar PDF:', error)
+    Swal.fire('Error', 'No se pudo generar el documento PDF.', 'error')
+  } finally {
+    loadingCertificado.value[id] = false
+  }
+}
+
 // LÓGICA DE LA RESEÑA
 const mostrarModalResena = ref(false)
+const guardandoResena = ref(false)
 const nuevaResena = reactive({
   estrellas: 0,
   comentario: ''
@@ -311,28 +327,35 @@ const abrirModalResena = () => {
 }
 
 const cerrarModalResena = () => {
+  if (guardandoResena.value) return
   mostrarModalResena.value = false
 }
 
-const guardarResena = () => {
+const guardarResena = async () => {
   if (nuevaResena.estrellas === 0) {
-    alert('Por favor selecciona al menos una estrella.')
+    Swal.fire('Atención', 'Por favor selecciona al menos una estrella.', 'warning')
     return
   }
   if (!nuevaResena.comentario.trim()) {
-    alert('Por favor escribe un breve comentario de tu experiencia.')
+    Swal.fire('Atención', 'Por favor escribe un breve comentario de tu experiencia.', 'warning')
     return
   }
   
-  // Guardar en el mock local
-  const pasantia = pasantias.value.find(p => p.id === pasantiaActiva.value)
-  if (pasantia) {
-    pasantia.resenaEstudiante = {
+  try {
+    guardandoResena.value = true
+    await axios.patch(`/informes/${pasantiaActiva.value}/resena`, {
       estrellas: nuevaResena.estrellas,
       comentario: nuevaResena.comentario
-    }
+    })
+    
+    Swal.fire('¡Éxito!', 'Tu reseña ha sido publicada exitosamente.', 'success')
+    cerrarModalResena()
+    await fetchHistorial() // Recargar datos para mostrar la reseña
+  } catch (error) {
+    console.error('Error guardando reseña:', error)
+    Swal.fire('Error', 'No se pudo guardar la reseña. Inténtalo más tarde.', 'error')
+  } finally {
+    guardandoResena.value = false
   }
-  
-  cerrarModalResena()
 }
 </script>

@@ -4,6 +4,12 @@ import { Estudiante } from '../../usuarios/entities/estudiante.entity';
 import { Tutor } from '../../usuarios/entities/tutor.entity';
 import { JefePasantes } from '../../usuarios/entities/jefe-pasantes.entity';
 
+export enum EstadoEjecucion {
+  EN_CURSO = 'En Curso',
+  FINALIZADA = 'Finalizada',
+  ABANDONADA = 'Abandonada',
+}
+
 export enum EstadoInscripcion {
   PENDIENTE = 'pendiente',
   APROBADA = 'aprobada',
@@ -53,6 +59,16 @@ export class Inscripcion {
 
   @Column({ type: 'text', nullable: true })
   observacion_baja: string;
+
+  @Column({ type: 'text', nullable: true })
+  comentario_jefe: string;
+
+  @Column({
+    type: 'enum',
+    enum: EstadoEjecucion,
+    nullable: true,
+  })
+  estado_ejecucion: EstadoEjecucion;
 
   @CreateDateColumn({ name: 'created_at' })
   created_at: Date;

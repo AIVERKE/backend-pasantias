@@ -19,4 +19,7 @@ export class HojaVida {
 
   @OneToMany(() => Habilidad, (habilidad) => habilidad.hoja_vida)
   habilidades: Habilidad[];
+
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  url_certificado: string;
 }
